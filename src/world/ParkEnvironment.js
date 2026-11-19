@@ -257,12 +257,12 @@ export class ParkEnvironment {
   }
 
   _buildGroundAndCanal() {
-    const grassTex = loadTiledTexture('/assets/textures/tex_grass.png', 4, 4);
-    const cobbleTex = loadTiledTexture('/assets/textures/tex_cobblestone.png', 10, 10);
-    const pathTex = loadTiledTexture('/assets/textures/tex_pathway.png', 2, 1);
-    const patisserieTex = loadTiledTexture('/assets/textures/tex_patisserie_tile.png', 6, 6);
-    const mossTex = loadTiledTexture('/assets/textures/tex_forest_moss.png', 5, 5);
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 5, 10);
+    const grassTex = loadTiledTexture('./assets/textures/tex_grass.png', 4, 4);
+    const cobbleTex = loadTiledTexture('./assets/textures/tex_cobblestone.png', 10, 10);
+    const pathTex = loadTiledTexture('./assets/textures/tex_pathway.png', 2, 1);
+    const patisserieTex = loadTiledTexture('./assets/textures/tex_patisserie_tile.png', 6, 6);
+    const mossTex = loadTiledTexture('./assets/textures/tex_forest_moss.png', 5, 5);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 5, 10);
 
     const lawnMat = new THREE.MeshStandardMaterial({
       map: grassTex,
@@ -419,7 +419,7 @@ export class ParkEnvironment {
   }
 
   _buildBridges() {
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 2, 2);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 2, 2);
     const styles = {
       royal: { rail: '#865382', post: '#e8d7ce', lamp: '#ffd466' },
       patisserie: { rail: '#e089ad', post: '#fff0e6', lamp: '#ffaad4' },
@@ -628,8 +628,8 @@ export class ParkEnvironment {
     gate.rotation.y = BRIDGE_SPECS[0].angle;
     this.group.add(gate);
 
-    const wallTex = loadTiledTexture('/assets/textures/tex_castle_wall.png', 2, 3);
-    const domeTex = loadTiledTexture('/assets/textures/tex_onion_dome.png', 3, 2);
+    const wallTex = loadTiledTexture('./assets/textures/tex_castle_wall.png', 2, 3);
+    const domeTex = loadTiledTexture('./assets/textures/tex_onion_dome.png', 3, 2);
     const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, color: '#9c6890', roughness: 0.84 });
     const domeMat = new THREE.MeshPhysicalMaterial({ map: domeTex, color: '#7b924e', roughness: 0.48, metalness: 0.15, sheen: 0.35 });
     const creamMat = new THREE.MeshStandardMaterial({ color: '#e6d2c3', roughness: 0.64 });
@@ -665,8 +665,8 @@ export class ParkEnvironment {
   }
 
   _buildCastlePlateauAndExhibition() {
-    const wallTex = loadTiledTexture('/assets/textures/tex_castle_wall.png', 3, 2);
-    const domeTex = loadTiledTexture('/assets/textures/tex_onion_dome.png', 4, 2);
+    const wallTex = loadTiledTexture('./assets/textures/tex_castle_wall.png', 3, 2);
+    const domeTex = loadTiledTexture('./assets/textures/tex_onion_dome.png', 4, 2);
 
     const wallMat = new THREE.MeshStandardMaterial({
       map: wallTex,
@@ -710,7 +710,7 @@ export class ParkEnvironment {
 
     const terraceFloor = new THREE.Mesh(
       new THREE.CylinderGeometry(CASTLE_PLATEAU.radius - 0.1, CASTLE_PLATEAU.radius - 0.1, 0.14, 60),
-      new THREE.MeshStandardMaterial({ map: loadTiledTexture('/assets/textures/tex_cobblestone.png', 5, 5), color: '#f0e2df', roughness: 0.72 })
+      new THREE.MeshStandardMaterial({ map: loadTiledTexture('./assets/textures/tex_cobblestone.png', 5, 5), color: '#f0e2df', roughness: 0.72 })
     );
     terraceFloor.position.y = CASTLE_PLATEAU.height + 0.04;
     terraceFloor.receiveShadow = true;
@@ -927,7 +927,7 @@ export class ParkEnvironment {
     }
 
     const texLoader = new THREE.TextureLoader();
-    const fallbackTex = texLoader.load('/assets/images/castle_jumbo_frame.png');
+    const fallbackTex = texLoader.load('./assets/images/castle_jumbo_frame.png');
     fallbackTex.colorSpace = THREE.SRGBColorSpace;
     this.jumboMat = new THREE.MeshBasicMaterial({ map: fallbackTex });
     const screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.16), this.jumboMat);
@@ -946,79 +946,79 @@ export class ParkEnvironment {
     maquettePed.add(pedBase, pedRing);
     this.group.add(maquettePed);
     this.layout.addCollider('circle', 8.0, -22.5, 2.4);
-    loadComfyGLB('/assets/models/castle_royal.glb', 3.4).then((glb) => {
-      if (glb) {
-        glb.position.y = 0.88;
-        maquettePed.add(glb);
-        this.exhibitModels.push({ mesh: glb });
-      }
-    });
-
-    const video = document.createElement('video');
-    video.src = '/assets/video/jumbo_parade.mp4';
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.crossOrigin = 'anonymous';
-    video.addEventListener('canplay', () => {
-      const vTex = new THREE.VideoTexture(video);
-      vTex.colorSpace = THREE.SRGBColorSpace;
-      this.jumboMat.map = vTex;
-      this.jumboMat.needsUpdate = true;
-      video.play().catch(() => {});
-    });
-    video.load();
-    this.videoEl = video;
-
-    const castleLight = new THREE.PointLight('#ffd699', 0, 56);
-    castleLight.position.set(0, 16, 12);
-    castle.add(castleLight);
-    this.nightLights.push({ light: castleLight, maxIntensity: 6.5 });
-
-    // Three Official Aubergine ComfyUI GLB Exhibition Pedestals atop the +1.8m Royal Balcony!
-    const exhibitSpecs = [
-      { url: '/assets/models/aubergine_standard.glb', fallback: 'aubergine_standard', x: -10.5, z: -32.2 },
-      { url: '/assets/models/aubergine_giant.glb', fallback: 'aubergine_giant', x: -6.0, z: -31.2 },
-      { url: '/assets/models/aubergine_charm.glb', fallback: 'aubergine_charm', x: -1.5, z: -32.2 },
-    ];
-    for (const ex of exhibitSpecs) {
-      const ped = new THREE.Group();
-      ped.position.set(ex.x, CASTLE_PLATEAU.height + 0.08, ex.z);
-      const baseCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.35, 0.82, 24), createPlushMaterial('#d4bce2'));
-      baseCyl.position.y = 0.41;
-      baseCyl.castShadow = true;
-      const trim = new THREE.Mesh(new THREE.TorusGeometry(1.16, 0.08, 10, 24), SharedMaterials.gold);
-      trim.rotation.x = Math.PI / 2;
-      trim.position.y = 0.82;
-      ped.add(baseCyl, trim);
-
-      const statue = createJellycatCharacter(ex.fallback, { scale: 1.15 });
-      statue.position.y = 0.85;
-      ped.add(statue);
-      this.group.add(ped);
-      this.layout.addCollider('circle', ex.x, ex.z, 1.35);
-
-      const entry = { mesh: statue };
-      this.exhibitModels.push(entry);
-
-      loadComfyGLB(ex.url, 1.65).then((glb) => {
+      loadComfyGLB('./assets/models/castle_royal.glb', 3.4).then((glb) => {
         if (glb) {
-          ped.remove(statue);
-          glb.position.y = 0.85;
-          ped.add(glb);
-          entry.mesh = glb;
+          glb.position.y = 0.88;
+          maquettePed.add(glb);
+          this.exhibitModels.push({ mesh: glb });
         }
       });
+
+      const video = document.createElement('video');
+      video.src = './assets/video/jumbo_parade.mp4';
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.crossOrigin = 'anonymous';
+      video.addEventListener('canplay', () => {
+        const vTex = new THREE.VideoTexture(video);
+        vTex.colorSpace = THREE.SRGBColorSpace;
+        this.jumboMat.map = vTex;
+        this.jumboMat.needsUpdate = true;
+        video.play().catch(() => { });
+      });
+      video.load();
+      this.videoEl = video;
+
+      const castleLight = new THREE.PointLight('#ffd699', 0, 56);
+      castleLight.position.set(0, 16, 12);
+      castle.add(castleLight);
+      this.nightLights.push({ light: castleLight, maxIntensity: 6.5 });
+
+      // Three Official Aubergine ComfyUI GLB Exhibition Pedestals atop the +1.8m Royal Balcony!
+      const exhibitSpecs = [
+        { url: './assets/models/aubergine_standard.glb', fallback: 'aubergine_standard', x: -10.5, z: -32.2 },
+        { url: './assets/models/aubergine_giant.glb', fallback: 'aubergine_giant', x: -6.0, z: -31.2 },
+        { url: './assets/models/aubergine_charm.glb', fallback: 'aubergine_charm', x: -1.5, z: -32.2 },
+      ];
+      for (const ex of exhibitSpecs) {
+        const ped = new THREE.Group();
+        ped.position.set(ex.x, CASTLE_PLATEAU.height + 0.08, ex.z);
+        const baseCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.35, 0.82, 24), createPlushMaterial('#d4bce2'));
+        baseCyl.position.y = 0.41;
+        baseCyl.castShadow = true;
+        const trim = new THREE.Mesh(new THREE.TorusGeometry(1.16, 0.08, 10, 24), SharedMaterials.gold);
+        trim.rotation.x = Math.PI / 2;
+        trim.position.y = 0.82;
+        ped.add(baseCyl, trim);
+
+        const statue = createJellycatCharacter(ex.fallback, { scale: 1.15 });
+        statue.position.y = 0.85;
+        ped.add(statue);
+        this.group.add(ped);
+        this.layout.addCollider('circle', ex.x, ex.z, 1.35);
+
+        const entry = { mesh: statue };
+        this.exhibitModels.push(entry);
+
+        loadComfyGLB(ex.url, 1.65).then((glb) => {
+          if (glb) {
+            ped.remove(statue);
+            glb.position.y = 0.85;
+            ped.add(glb);
+            entry.mesh = glb;
+          }
+        });
+      }
     }
-  }
 
   _buildThemedZoneLandmarks() {
-    // === ZONE 2 SE: Patisserie Bay Golden Croissant Archway + 3-Tier Macaron Tower ===
-    const croissantArch = new THREE.Group();
-    croissantArch.position.set(44, 0, 23);
-    croissantArch.rotation.y = 1.08;
-    const macColors = ['#ffa8c5', '#a5f3fc', '#fde68a', '#d8b4fe'];
-    for (const side of [-4.2, 4.2]) {
+      // === ZONE 2 SE: Patisserie Bay Golden Croissant Archway + 3-Tier Macaron Tower ===
+      const croissantArch = new THREE.Group();
+      croissantArch.position.set(44, 0, 23);
+      croissantArch.rotation.y = 1.08;
+      const macColors = ['#ffa8c5', '#a5f3fc', '#fde68a', '#d8b4fe'];
+      for(const side of [- 4.2, 4.2]) {
       for (let m = 0; m < 4; m++) {
         const mac = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.9, 20), createPlushMaterial(macColors[m]));
         mac.position.set(side, 0.5 + m * 1.15, 0);
@@ -1243,8 +1243,8 @@ export class ParkEnvironment {
     house.rotation.y = rotY;
     this.group.add(house);
 
-    const wallTex = loadTiledTexture('/assets/textures/tex_castle_wall.png', 2, 2);
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 2, 1);
+    const wallTex = loadTiledTexture('./assets/textures/tex_castle_wall.png', 2, 2);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 2, 1);
     const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, color: wallColor, roughness: 0.8 });
     const trimMat = new THREE.MeshStandardMaterial({ color: '#f7ece1', roughness: 0.65 });
     const roofMat = createPlushMaterial(roofColor);
@@ -1613,7 +1613,7 @@ export class ParkEnvironment {
 
     // 4. NW CANAL INDOOR DARK-RIDE SHOW PAVILION ("小小茄子世界" 水上音乐长廊, angle 3.74..4.08)
     const archWallMat = new THREE.MeshStandardMaterial({
-      map: loadTiledTexture('/assets/textures/tex_castle_wall.png', 2, 2),
+      map: loadTiledTexture('./assets/textures/tex_castle_wall.png', 2, 2),
       color: '#b689c4',
       roughness: 0.78,
       side: THREE.DoubleSide,
@@ -1906,7 +1906,7 @@ export class ParkEnvironment {
     }
 
     // 5. Outdoor Cafes, Popcorn Carts & Directional Park Signposts
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 2, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 2, 1);
     const umbrellaMat = new THREE.MeshStandardMaterial({ map: canopyTex, roughness: 0.7, side: THREE.DoubleSide });
     const cartSpecs = [
       { x: -3.2, z: 33, color: '#ff94b8', type: 'cart' },
@@ -2235,7 +2235,7 @@ export class ParkEnvironment {
     }
 
     if (this.videoEl && this.videoEl.paused && this.videoEl.readyState >= 2) {
-      this.videoEl.play().catch(() => {});
+      this.videoEl.play().catch(() => { });
     }
 
     if (this.paradeActive) {

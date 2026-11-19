@@ -18,12 +18,12 @@ export class AudioManager {
       this.ctx = new AudioCtx();
     }
 
-    this.bgmDay = this._createAudio('/assets/audio/bgm_day.flac', true, 0.35);
-    this.bgmParade = this._createAudio('/assets/audio/bgm_parade.flac', true, 0.38);
+    this.bgmDay = this._createAudio('./assets/audio/bgm_day.flac', true, 0.35);
+    this.bgmParade = this._createAudio('./assets/audio/bgm_parade.flac', true, 0.38);
 
     const sfxNames = ['squeak', 'coaster', 'boat', 'whack', 'bumper', 'fireworks', 'coin'];
     for (const name of sfxNames) {
-      this.sfxCache[name] = `/assets/audio/sfx_${name}.flac`;
+      this.sfxCache[name] = `./assets/audio/sfx_${name}.flac`;
     }
 
     this.playBgm('day');
@@ -46,7 +46,7 @@ export class AudioManager {
     }
     this.currentBgm = target;
     if (target && !this.muted) {
-      target.play().catch(() => {});
+      target.play().catch(() => { });
     }
   }
 
@@ -95,7 +95,7 @@ export class AudioManager {
       if (this.muted) {
         this.currentBgm.pause();
       } else {
-        this.currentBgm.play().catch(() => {});
+        this.currentBgm.play().catch(() => { });
       }
     }
     return this.muted;

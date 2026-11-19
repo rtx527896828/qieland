@@ -124,12 +124,12 @@ export class WeatherSystem {
     // Manage rain audio cleanly
     if (modeId === 'rain') {
       if (!this.rainAudio) {
-        this.rainAudio = new Audio('/assets/audio/sfx_rain.flac');
+        this.rainAudio = new Audio('./assets/audio/sfx_rain.flac');
         this.rainAudio.loop = true;
         this.rainAudio.volume = 0.28;
       }
       if (!this.audio?.muted && this.audio?.unlocked) {
-        this.rainAudio.play().catch(() => {});
+        this.rainAudio.play().catch(() => { });
       }
     } else if (this.rainAudio && !this.rainAudio.paused) {
       this.rainAudio.pause();

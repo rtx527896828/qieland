@@ -1,194 +1,199 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Qieland · 茄子奇幻乐园 | Jellycat Aubergine Wonderland</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🍆</text></svg>" />
-  </head>
-  <body>
-    <canvas id="game-canvas"></canvas>
 
-    <!-- Welcome Splash Screen -->
-    <div id="splash-screen" class="splash-overlay">
-      <div class="splash-card">
-        <div class="splash-badge">✨ Jellycat 茄子奇幻主题度假区 · 支持键鼠与 iPad 触屏 ✨</div>
-        <h1 class="splash-title">🍆 Qieland 茄子奇幻乐园</h1>
-        <p class="splash-subtitle">
-          沿着曲线石板步道穿行五大主题片区、商业小镇、蜿蜒翡翠河与高台皇宫，<br />
-          探索 19 项室内暗骑过山车、激流勇进与嘉年华游乐体验！
-        </p>
-        <div class="splash-controls-hint">
-          <span><b>WASD / 左摇杆</b> 移动</span>
-          <span><b>Space / 跳跃键</b> 跳跃与加速</span>
-          <span><b>拖拽 / 双指缩放</b> 旋转视角</span>
-          <span><b>E / 互动键</b> 乘坐与对话</span>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Qieland · 茄子奇幻乐园 | Jellycat Aubergine Wonderland</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🍆</text></svg>" />
+</head>
+
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Welcome Splash Screen -->
+  <div id="splash-screen" class="splash-overlay">
+    <div class="splash-card">
+      <div class="splash-badge">✨ Jellycat 茄子奇幻主题度假区 · 支持键鼠与 iPad 触屏 ✨</div>
+      <h1 class="splash-title">🍆 Qieland 茄子奇幻乐园</h1>
+      <p class="splash-subtitle">
+        沿着曲线石板步道穿行五大主题片区、商业小镇、蜿蜒翡翠河与高台皇宫，<br />
+        探索 19 项室内暗骑过山车、激流勇进与嘉年华游乐体验！
+      </p>
+      <div class="splash-controls-hint">
+        <span><b>WASD / 左摇杆</b> 移动</span>
+        <span><b>Space / 跳跃键</b> 跳跃与加速</span>
+        <span><b>拖拽 / 双指缩放</b> 旋转视角</span>
+        <span><b>E / 互动键</b> 乘坐与对话</span>
+      </div>
+      <button id="btn-enter-park" class="btn-primary btn-lg">🎉 进入茄子乐园</button>
+    </div>
+  </div>
+
+  <!-- Main HUD -->
+  <div id="hud" class="hud hidden">
+    <!-- Top Left Status -->
+    <div class="hud-top-left">
+      <div class="brand-pill">
+        <span class="brand-icon">🍆</span>
+        <div>
+          <div class="brand-name">QIELAND 4.0</div>
+          <div class="brand-sub" id="renderer-badge">WebGL2 毛绒引擎</div>
         </div>
-        <button id="btn-enter-park" class="btn-primary btn-lg">🎉 进入茄子乐园</button>
+      </div>
+      <div class="stat-pill" title="开心茄币">
+        <span>🪙</span>
+        <span id="coin-count">100</span>
+      </div>
+      <div class="stat-pill clickable" id="btn-hud-dex" title="打开 Jellycat 玩偶图鉴">
+        <span>📖</span>
+        <span id="dex-progress">2 / 17</span>
+      </div>
+      <div class="stat-pill clickable" id="btn-hud-wardrobe" title="切换茄子形态与时装">
+        <span>👗</span>
+        <span id="costume-label">官方挂件长腿茄</span>
+      </div>
+      <button id="btn-audio-toggle" class="icon-btn" title="开关音乐与音效">🔊</button>
+    </div>
+
+    <!-- Top Right Quick Menu -->
+    <div class="hud-top-right">
+      <button id="btn-map" class="nav-pill">🗺️ 总平图 & 速传</button>
+      <button id="btn-weather" class="nav-pill">☀️ 晴朗微风</button>
+      <button id="btn-parade" class="nav-pill accent">🎆 花车烟花夜</button>
+      <button id="btn-wardrobe" class="nav-pill">👗 茄子衣橱</button>
+      <button id="btn-dex" class="nav-pill">📖 玩偶图鉴</button>
+      <button id="btn-photo" class="nav-pill">📸 打卡拍照</button>
+      <button id="btn-touch-toggle" class="nav-pill">📱 触屏手柄</button>
+      <button id="btn-comfy" class="nav-pill comfy">🎨 原画与AI工坊</button>
+    </div>
+
+    <!-- iPad & Touch Virtual Controls -->
+    <div id="touch-controls" class="touch-ui hidden">
+      <div id="touch-joystick" class="touch-joystick" aria-label="移动摇杆">
+        <div id="touch-joystick-knob" class="touch-joystick-knob"></div>
+      </div>
+      <div id="touch-actions" class="touch-actions">
+        <div class="touch-sub-row">
+          <button id="touch-btn-view" class="touch-mini-btn">📷 视角</button>
+          <button id="touch-btn-cheer" class="touch-mini-btn">🙌 欢呼</button>
+        </div>
+        <div class="touch-main-row">
+          <button id="touch-btn-interact" class="touch-circle-btn interact">E 互动</button>
+          <button id="touch-btn-jump" class="touch-circle-btn jump">⬆️ 跳/冲</button>
+        </div>
       </div>
     </div>
 
-    <!-- Main HUD -->
-    <div id="hud" class="hud hidden">
-      <!-- Top Left Status -->
-      <div class="hud-top-left">
-        <div class="brand-pill">
-          <span class="brand-icon">🍆</span>
-          <div>
-            <div class="brand-name">QIELAND 4.0</div>
-            <div class="brand-sub" id="renderer-badge">WebGL2 毛绒引擎</div>
-          </div>
-        </div>
-        <div class="stat-pill" title="开心茄币">
-          <span>🪙</span>
-          <span id="coin-count">100</span>
-        </div>
-        <div class="stat-pill clickable" id="btn-hud-dex" title="打开 Jellycat 玩偶图鉴">
-          <span>📖</span>
-          <span id="dex-progress">2 / 17</span>
-        </div>
-        <div class="stat-pill clickable" id="btn-hud-wardrobe" title="切换茄子形态与时装">
-          <span>👗</span>
-          <span id="costume-label">官方挂件长腿茄</span>
-        </div>
-        <button id="btn-audio-toggle" class="icon-btn" title="开关音乐与音效">🔊</button>
-      </div>
+    <!-- Toast Notification -->
+    <div id="toast-container" class="toast-container"></div>
 
-      <!-- Top Right Quick Menu -->
-      <div class="hud-top-right">
-        <button id="btn-map" class="nav-pill">🗺️ 总平图 & 速传</button>
-        <button id="btn-weather" class="nav-pill">☀️ 晴朗微风</button>
-        <button id="btn-parade" class="nav-pill accent">🎆 花车烟花夜</button>
-        <button id="btn-wardrobe" class="nav-pill">👗 茄子衣橱</button>
-        <button id="btn-dex" class="nav-pill">📖 玩偶图鉴</button>
-        <button id="btn-photo" class="nav-pill">📸 打卡拍照</button>
-        <button id="btn-touch-toggle" class="nav-pill">📱 触屏手柄</button>
-        <button id="btn-comfy" class="nav-pill comfy">🎨 原画与AI工坊</button>
-      </div>
-
-      <!-- iPad & Touch Virtual Controls -->
-      <div id="touch-controls" class="touch-ui hidden">
-        <div id="touch-joystick" class="touch-joystick" aria-label="移动摇杆">
-          <div id="touch-joystick-knob" class="touch-joystick-knob"></div>
-        </div>
-        <div id="touch-actions" class="touch-actions">
-          <div class="touch-sub-row">
-            <button id="touch-btn-view" class="touch-mini-btn">📷 视角</button>
-            <button id="touch-btn-cheer" class="touch-mini-btn">🙌 欢呼</button>
-          </div>
-          <div class="touch-main-row">
-            <button id="touch-btn-interact" class="touch-circle-btn interact">E 互动</button>
-            <button id="touch-btn-jump" class="touch-circle-btn jump">⬆️ 跳/冲</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Toast Notification -->
-      <div id="toast-container" class="toast-container"></div>
-
-      <!-- Interaction Prompt -->
-      <div id="interact-prompt" class="interact-prompt hidden">
-        <span class="key-badge" id="interact-key">E</span>
-        <span id="interact-text">乘坐设施</span>
-      </div>
-
-      <!-- NPC Dialogue Bubble -->
-      <div id="dialogue-box" class="dialogue-box hidden">
-        <div class="dialogue-header">
-          <span id="dialogue-avatar">🍆</span>
-          <span id="dialogue-name">茄子朋友</span>
-        </div>
-        <p id="dialogue-content"></p>
-        <div class="dialogue-footer">按 [Space] 或点击关闭</div>
-      </div>
-
-      <!-- Active Ride Controls Overlay -->
-      <div id="ride-hud" class="ride-hud hidden">
-        <div class="ride-title" id="ride-hud-title">🎢 紫金闪电过山车</div>
-        <div class="ride-status" id="ride-hud-status">视角已自动避障</div>
-        <div class="ride-actions" id="ride-hud-actions"></div>
-        <button id="btn-exit-ride" class="btn-danger btn-sm">🚪 下车离开 [E / Esc]</button>
-      </div>
-
-      <!-- Mini-Game HUD Overlay -->
-      <div id="minigame-hud" class="minigame-hud hidden">
-        <div class="mg-header">
-          <h3 id="mg-title">小游戏</h3>
-          <div class="mg-stats">
-            <span id="mg-timer">⏱️ 30s</span>
-            <span id="mg-score">⭐ 0 分</span>
-          </div>
-        </div>
-        <p id="mg-hint" class="mg-hint"></p>
-        <div id="mg-custom-controls" class="mg-controls"></div>
-        <button id="btn-exit-minigame" class="btn-danger btn-sm">退出游玩 [Esc]</button>
-      </div>
+    <!-- Interaction Prompt -->
+    <div id="interact-prompt" class="interact-prompt hidden">
+      <span class="key-badge" id="interact-key">E</span>
+      <span id="interact-text">乘坐设施</span>
     </div>
 
-    <!-- Drawers & Modals -->
-    <div id="modal-backdrop" class="modal-backdrop hidden"></div>
-
-    <!-- Master Map & Fast Travel Modal -->
-    <div id="modal-map" class="modal-card wide hidden">
-      <div class="modal-head">
-        <h2>🗺️ Qieland 园区导览总平图 & 速传</h2>
-        <button class="modal-close" data-close="modal-map">✕</button>
+    <!-- NPC Dialogue Bubble -->
+    <div id="dialogue-box" class="dialogue-box hidden">
+      <div class="dialogue-header">
+        <span id="dialogue-avatar">🍆</span>
+        <span id="dialogue-name">茄子朋友</span>
       </div>
-      <div class="master-map-banner">
-        <img src="/assets/images/park_master_map.png" alt="Qieland Master Map" />
-        <div id="map-player-dot" class="map-player-dot" title="当前所在位置">🍆</div>
-      </div>
-      <div id="map-grid" class="card-grid"></div>
+      <p id="dialogue-content"></p>
+      <div class="dialogue-footer">按 [Space] 或点击关闭</div>
     </div>
 
-    <!-- Wardrobe Modal -->
-    <div id="modal-wardrobe" class="modal-card wide hidden">
-      <div class="modal-head">
-        <h2>👗 茄子大明星衣橱</h2>
-        <button class="modal-close" data-close="modal-wardrobe">✕</button>
-      </div>
-      <p class="modal-desc">可切换三款 100% 还原官方参考图比例的茄子形态、主题时装，以及由三张官方原图直出 ComfyUI Trellis2 的真实 3D 模型！</p>
-      <div id="wardrobe-grid" class="card-grid"></div>
+    <!-- Active Ride Controls Overlay -->
+    <div id="ride-hud" class="ride-hud hidden">
+      <div class="ride-title" id="ride-hud-title">🎢 紫金闪电过山车</div>
+      <div class="ride-status" id="ride-hud-status">视角已自动避障</div>
+      <div class="ride-actions" id="ride-hud-actions"></div>
+      <button id="btn-exit-ride" class="btn-danger btn-sm">🚪 下车离开 [E / Esc]</button>
     </div>
 
-    <!-- Jellycat Collection Dex Modal -->
-    <div id="modal-dex" class="modal-card wide hidden">
-      <div class="modal-head">
-        <h2>📖 Jellycat 乐园玩偶收藏图鉴 (<span id="dex-modal-count">2/17</span>)</h2>
-        <button class="modal-close" data-close="modal-dex">✕</button>
+    <!-- Mini-Game HUD Overlay -->
+    <div id="minigame-hud" class="minigame-hud hidden">
+      <div class="mg-header">
+        <h3 id="mg-title">小游戏</h3>
+        <div class="mg-stats">
+          <span id="mg-timer">⏱️ 30s</span>
+          <span id="mg-score">⭐ 0 分</span>
+        </div>
       </div>
-      <p class="modal-desc">在乐园里与玩偶对话、用奇幻相机拍照打卡、或在 3D 抓娃娃机抓到他们即可点亮图鉴！</p>
-      <div id="dex-grid" class="dex-grid"></div>
+      <p id="mg-hint" class="mg-hint"></p>
+      <div id="mg-custom-controls" class="mg-controls"></div>
+      <button id="btn-exit-minigame" class="btn-danger btn-sm">退出游玩 [Esc]</button>
     </div>
+  </div>
 
-    <!-- Concept Art & ComfyUI Asset Gallery Modal -->
-    <div id="modal-comfy" class="modal-card wide hidden">
-      <div class="modal-head">
-        <h2>🎨 建筑原画、官方参考图 & ComfyUI AI 工坊</h2>
-        <button class="modal-close" data-close="modal-comfy">✕</button>
-      </div>
-      <p class="modal-desc">完整展示从官方三茄子参考图 → 3D GLB 模型、园区手绘总平图、城堡原画、4 套无缝 PBR 地面贴图到 LTX-2.3 巨幕视频与原声音乐的完整管线：</p>
-      <div id="comfy-gallery" class="comfy-gallery"></div>
+  <!-- Drawers & Modals -->
+  <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+
+  <!-- Master Map & Fast Travel Modal -->
+  <div id="modal-map" class="modal-card wide hidden">
+    <div class="modal-head">
+      <h2>🗺️ Qieland 园区导览总平图 & 速传</h2>
+      <button class="modal-close" data-close="modal-map">✕</button>
     </div>
-
-    <!-- Photo Postcard Preview Modal -->
-    <div id="modal-photo" class="modal-card hidden">
-      <div class="modal-head">
-        <h2>📸 Qieland 奇幻明信片</h2>
-        <button class="modal-close" data-close="modal-photo">✕</button>
-      </div>
-      <div class="photo-preview-wrap">
-        <img id="photo-preview-img" alt="Qieland Snapshot" />
-      </div>
-      <div id="photo-caption" class="photo-caption"></div>
-      <div class="photo-actions">
-        <a id="btn-download-photo" class="btn-primary" download="qieland-memory.png">💾 保存明信片</a>
-        <button class="btn-secondary" data-close="modal-photo">继续游玩</button>
-      </div>
+    <div class="master-map-banner">
+      <img src="./assets/images/park_master_map.png" alt="Qieland Master Map" />
+      <div id="map-player-dot" class="map-player-dot" title="当前所在位置">🍆</div>
     </div>
+    <div id="map-grid" class="card-grid"></div>
+  </div>
 
-    <script type="module" src="/src/main.js"></script>
-  </body>
+  <!-- Wardrobe Modal -->
+  <div id="modal-wardrobe" class="modal-card wide hidden">
+    <div class="modal-head">
+      <h2>👗 茄子大明星衣橱</h2>
+      <button class="modal-close" data-close="modal-wardrobe">✕</button>
+    </div>
+    <p class="modal-desc">可切换三款 100% 还原官方参考图比例的茄子形态、主题时装，以及由三张官方原图直出 ComfyUI Trellis2 的真实 3D 模型！</p>
+    <div id="wardrobe-grid" class="card-grid"></div>
+  </div>
+
+  <!-- Jellycat Collection Dex Modal -->
+  <div id="modal-dex" class="modal-card wide hidden">
+    <div class="modal-head">
+      <h2>📖 Jellycat 乐园玩偶收藏图鉴 (<span id="dex-modal-count">2/17</span>)</h2>
+      <button class="modal-close" data-close="modal-dex">✕</button>
+    </div>
+    <p class="modal-desc">在乐园里与玩偶对话、用奇幻相机拍照打卡、或在 3D 抓娃娃机抓到他们即可点亮图鉴！</p>
+    <div id="dex-grid" class="dex-grid"></div>
+  </div>
+
+  <!-- Concept Art & ComfyUI Asset Gallery Modal -->
+  <div id="modal-comfy" class="modal-card wide hidden">
+    <div class="modal-head">
+      <h2>🎨 建筑原画、官方参考图 & ComfyUI AI 工坊</h2>
+      <button class="modal-close" data-close="modal-comfy">✕</button>
+    </div>
+    <p class="modal-desc">完整展示从官方三茄子参考图 → 3D GLB 模型、园区手绘总平图、城堡原画、4 套无缝 PBR 地面贴图到 LTX-2.3 巨幕视频与原声音乐的完整管线：</p>
+    <div id="comfy-gallery" class="comfy-gallery"></div>
+  </div>
+
+  <!-- Photo Postcard Preview Modal -->
+  <div id="modal-photo" class="modal-card hidden">
+    <div class="modal-head">
+      <h2>📸 Qieland 奇幻明信片</h2>
+      <button class="modal-close" data-close="modal-photo">✕</button>
+    </div>
+    <div class="photo-preview-wrap">
+      <img id="photo-preview-img" alt="Qieland Snapshot" />
+    </div>
+    <div id="photo-caption" class="photo-caption"></div>
+    <div class="photo-actions">
+      <a id="btn-download-photo" class="btn-primary" download="qieland-memory.png">💾 保存明信片</a>
+      <button class="btn-secondary" data-close="modal-photo">继续游玩</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
 </html>

@@ -6,9 +6,9 @@ import {
 } from '../world/CharacterFactory.js';
 
 const GLB_COSTUMES = {
-  comfy_standard_glb: '/assets/models/aubergine_standard.glb',
-  comfy_giant_glb: '/assets/models/aubergine_giant.glb',
-  comfy_charm_glb: '/assets/models/aubergine_charm.glb',
+  comfy_standard_glb: './assets/models/aubergine_standard.glb',
+  comfy_giant_glb: './assets/models/aubergine_giant.glb',
+  comfy_charm_glb: './assets/models/aubergine_charm.glb',
 };
 
 export class PlayerController {
@@ -48,22 +48,22 @@ export class PlayerController {
   _bindInputs() {
     window.addEventListener('keydown', (e) => {
       this.keys.add(e.code);
-        if (this.enabled && e.code === 'Space') {
-          e.preventDefault();
-          if (document.activeElement instanceof HTMLElement) {
-            document.activeElement.blur();
-          }
-          if (this.onGround) {
-            this.velY = 9.2;
-            this.onGround = false;
-            this.audio?.playSfx('squeak', 0.45);
-          }
+      if (this.enabled && e.code === 'Space') {
+        e.preventDefault();
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
         }
-        if (this.enabled && e.code === 'KeyH') {
-          this.isCheering = true;
-          this.cheerTimer = 1.4;
+        if (this.onGround) {
+          this.velY = 9.2;
+          this.onGround = false;
+          this.audio?.playSfx('squeak', 0.45);
         }
-      });
+      }
+      if (this.enabled && e.code === 'KeyH') {
+        this.isCheering = true;
+        this.cheerTimer = 1.4;
+      }
+    });
     window.addEventListener('keyup', (e) => {
       this.keys.delete(e.code);
     });

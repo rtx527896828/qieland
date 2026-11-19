@@ -113,7 +113,7 @@ export class AttractionsManager {
       ballastPts.push(p.clone().add(new THREE.Vector3(0, -0.06, 0)));
     }
 
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 2, 1);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 2, 1);
     const tieGeo = new THREE.BoxGeometry(1.65, 0.1, 0.24);
     const tieMat = new THREE.MeshStandardMaterial({ map: woodTex, color: '#7a5238', roughness: 0.85 });
     const tieCount = 240;
@@ -187,80 +187,80 @@ export class AttractionsManager {
     loco.add(fallbackLoco);
     this.group.add(loco);
 
-    loadComfyGLB('/assets/models/train_locomotive.glb', 3.4).then((glb) => {
-      if (glb) {
-        loco.remove(fallbackLoco);
-        glb.position.y = 0.05;
-        loco.add(glb);
-      }
-    });
-
-    const carriages = [];
-    const riderIds = ['aubergine_king', 'bashful_bunny'];
-    for (let c = 0; c < 2; c++) {
-      const car = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.05, 3.4), createPlushMaterial(c === 0 ? '#b48ee0' : '#ff94b8'));
-      body.position.y = 0.92;
-      body.castShadow = true;
-      const trim = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.16, 3.5), SharedMaterials.gold);
-      trim.position.y = 1.48;
-      const roof = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.15, 3.5), createFeltMaterial('#ffe6ef'));
-      roof.position.y = 2.65;
-      for (const px of [-0.82, 0.82]) {
-        for (const pz of [-1.4, 1.4]) {
-          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8), SharedMaterials.gold);
-          post.position.set(px, 2.05, pz);
-          car.add(post);
+      loadComfyGLB('./assets/models/train_locomotive.glb', 3.4).then((glb) => {
+        if (glb) {
+          loco.remove(fallbackLoco);
+          glb.position.y = 0.05;
+          loco.add(glb);
         }
+      });
+
+      const carriages = [];
+      const riderIds = ['aubergine_king', 'bashful_bunny'];
+      for (let c = 0; c < 2; c++) {
+        const car = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 1.05, 3.4), createPlushMaterial(c === 0 ? '#b48ee0' : '#ff94b8'));
+        body.position.y = 0.92;
+        body.castShadow = true;
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.16, 3.5), SharedMaterials.gold);
+        trim.position.y = 1.48;
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.15, 3.5), createFeltMaterial('#ffe6ef'));
+        roof.position.y = 2.65;
+        for (const px of [-0.82, 0.82]) {
+          for (const pz of [-1.4, 1.4]) {
+            const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.2, 8), SharedMaterials.gold);
+            post.position.set(px, 2.05, pz);
+            car.add(post);
+          }
+        }
+        const npc = createJellycatCharacter(riderIds[c], { scale: 0.72 });
+        npc.position.set(0, 1.0, 0.5);
+        car.add(body, trim, roof, npc);
+        this.group.add(car);
+        carriages.push(car);
       }
-      const npc = createJellycatCharacter(riderIds[c], { scale: 0.72 });
-      npc.position.set(0, 1.0, 0.5);
-      car.add(body, trim, roof, npc);
-      this.group.add(car);
-      carriages.push(car);
-    }
 
-    // Animated steam puffs emitted from chimney
-    const smokePuffs = [];
-    const smokeMat = new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, roughness: 0.95 });
-    for (let i = 0; i < 12; i++) {
-      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), smokeMat.clone());
-      this.group.add(puff);
-      smokePuffs.push({ mesh: puff, age: (i / 12) * 1.8, life: 1.8, origin: new THREE.Vector3(), velY: 2.2 });
-    }
+      // Animated steam puffs emitted from chimney
+      const smokePuffs = [];
+      const smokeMat = new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, roughness: 0.95 });
+      for (let i = 0; i < 12; i++) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 10), smokeMat.clone());
+        this.group.add(puff);
+        smokePuffs.push({ mesh: puff, age: (i / 12) * 1.8, life: 1.8, origin: new THREE.Vector3(), velY: 2.2 });
+      }
 
-    this.train = { curve, loco, carriages, smokePuffs, progress: 0.03, speed: 0.022, boost: 0, smokeTimer: 0 };
-    this._registerAttraction({
-      id: 'train',
-      type: 'ride',
-      name: '环园皇家蒸汽小火车',
-      emoji: '🚂',
-      padPos: new THREE.Vector3(21.5, 0, 108.0),
-      teleportPos: new THREE.Vector3(19.5, 0.08, 105.0),
-      desc: '环绕全园五大主题片区的 700 米复古蒸汽专线！按 Space 鸣笛全速冲刺！',
-    });
-  }
+      this.train = { curve, loco, carriages, smokePuffs, progress: 0.03, speed: 0.022, boost: 0, smokeTimer: 0 };
+      this._registerAttraction({
+        id: 'train',
+        type: 'ride',
+        name: '环园皇家蒸汽小火车',
+        emoji: '🚂',
+        padPos: new THREE.Vector3(21.5, 0, 108.0),
+        teleportPos: new THREE.Vector3(19.5, 0.08, 105.0),
+        desc: '环绕全园五大主题片区的 700 米复古蒸汽专线！按 Space 鸣笛全速冲刺！',
+      });
+    }
 
   _buildCoasterTrackAndCars({
-    curve,
-    samples = 300,
-    tieCount = 260,
-    railMat,
-    spineMat,
-    tieMat,
-    pillarMat,
-    pillarStep = 12,
-    carCount = 5,
-    carColor = '#7e5b79',
-    headlightColor = '#ffcf5c',
-    skipPillarCheck = null,
-  }) {
-    const leftPts = [];
-    const rightPts = [];
-    const spinePts = [];
-    const up = new THREE.Vector3(0, 1, 0);
+      curve,
+      samples = 300,
+      tieCount = 260,
+      railMat,
+      spineMat,
+      tieMat,
+      pillarMat,
+      pillarStep = 12,
+      carCount = 5,
+      carColor = '#7e5b79',
+      headlightColor = '#ffcf5c',
+      skipPillarCheck = null,
+    }) {
+      const leftPts = [];
+      const rightPts = [];
+      const spinePts = [];
+      const up = new THREE.Vector3(0, 1, 0);
 
-    for (let i = 0; i < samples; i++) {
+      for(let i = 0; i<samples; i++) {
       const t = i / samples;
       const p = curve.getPointAt(t);
       const tan = curve.getTangentAt(t).normalize();
@@ -484,7 +484,7 @@ export class AttractionsManager {
     mGroup.add(treasuryKing, dragonBody);
 
     // Covered Victorian Station Platform
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 2, 2);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 2, 2);
     const station = new THREE.Group();
     station.position.set(c.x - 12.2, 0, c.z + 9.2);
     station.rotation.y = 0.5;
@@ -718,7 +718,7 @@ export class AttractionsManager {
     this.group.add(manor);
     this.layout.addCollider('box', c.x, c.z, 12.2, 11.2);
 
-    const wallTex = loadTiledTexture('/assets/textures/tex_castle_wall.png', 3, 2);
+    const wallTex = loadTiledTexture('./assets/textures/tex_castle_wall.png', 3, 2);
     const extMat = new THREE.MeshStandardMaterial({ map: wallTex, color: '#3b2452', roughness: 0.85 });
     const darkIntMat = new THREE.MeshBasicMaterial({ color: '#06020e', side: THREE.BackSide });
     const ghostGlowMat = new THREE.MeshStandardMaterial({ color: '#a7f3d0', emissive: '#34d399', emissiveIntensity: 1.15, transparent: true, opacity: 0.72 });
@@ -1087,7 +1087,7 @@ export class AttractionsManager {
     this.group.add(court);
     this.layout.addCollider('circle', c.x, c.z, 3.8);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 3, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 3, 1);
     const frame = new THREE.Mesh(new THREE.BoxGeometry(6.8, 5.4, 3.2), createPlushMaterial('#43225c'));
     frame.position.set(0, 2.7, -1.6);
     const roof = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2.2, 4), new THREE.MeshStandardMaterial({ map: canopyTex, roughness: 0.6 }));
@@ -1136,7 +1136,7 @@ export class AttractionsManager {
     this.group.add(booth);
     this.layout.addCollider('circle', c.x, c.z, 3.6);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 3, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 3, 1);
     const counter = new THREE.Mesh(new THREE.BoxGeometry(7.2, 1.1, 3.4), createPlushMaterial('#7e5b79'));
     counter.position.set(0, 0.55, 0);
     const roof = new THREE.Mesh(new THREE.ConeGeometry(5.8, 2.2, 4), new THREE.MeshStandardMaterial({ map: canopyTex, roughness: 0.6 }));
@@ -1272,7 +1272,7 @@ export class AttractionsManager {
 
   // ==================== ④ MEANDERING LAZY RIVER BOATS ====================
   _buildLazyRiverBoats() {
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 1, 2);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 1, 2);
     const woodMat = new THREE.MeshStandardMaterial({ map: woodTex, color: '#e6b88a', roughness: 0.65 });
 
     const boats = [];
@@ -1458,7 +1458,7 @@ export class AttractionsManager {
     }
     this.layout.addCollider('circle', center.x, center.z, 5.0);
 
-    const domeTex = loadTiledTexture('/assets/textures/tex_onion_dome.png', 3, 2);
+    const domeTex = loadTiledTexture('./assets/textures/tex_onion_dome.png', 3, 2);
     const crownCap = new THREE.Mesh(
       new THREE.CylinderGeometry(2.6, 2.8, 0.8, 28),
       new THREE.MeshPhysicalMaterial({ map: domeTex, color: '#7f9452', roughness: 0.48 })
@@ -1510,7 +1510,7 @@ export class AttractionsManager {
 
     const frameMat = new THREE.MeshStandardMaterial({ color: '#4d2e63', metalness: 0.5, roughness: 0.35 });
     const hullMat = createPlushMaterial('#6a407a');
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 2, 2);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 2, 2);
     const deckMat = new THREE.MeshStandardMaterial({ map: woodTex, color: '#deb27e', roughness: 0.72 });
 
     // Stone deck platform
@@ -1583,7 +1583,7 @@ export class AttractionsManager {
     mast.position.y = 4.1;
     const sail = new THREE.Mesh(
       new THREE.PlaneGeometry(3.2, 3.8),
-      new THREE.MeshStandardMaterial({ map: loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 2, 1), side: THREE.DoubleSide })
+      new THREE.MeshStandardMaterial({ map: loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 2, 1), side: THREE.DoubleSide })
     );
     sail.position.set(0, 4.4, 0.15);
     sail.rotation.y = Math.PI / 2;
@@ -1643,7 +1643,7 @@ export class AttractionsManager {
     spinner.add(pillar, mirrorBand);
     this.layout.addCollider('circle', center.x, center.z, 1.6);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 5, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 5, 1);
     const canopyMat = new THREE.MeshPhysicalMaterial({
       map: canopyTex,
       roughness: 0.65,
@@ -1737,7 +1737,7 @@ export class AttractionsManager {
     garden.position.copy(center);
     this.group.add(garden);
 
-    const woodTex = loadTiledTexture('/assets/textures/tex_wood.png', 2, 2);
+    const woodTex = loadTiledTexture('./assets/textures/tex_wood.png', 2, 2);
     const woodMat = new THREE.MeshStandardMaterial({ map: woodTex, color: '#e8b98a', roughness: 0.72 });
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(8.2, 0.82, 8.2), woodMat);
@@ -1800,7 +1800,7 @@ export class AttractionsManager {
     this.group.add(machine);
     this.layout.addCollider('box', center.x, center.z, 3.4, 3.4);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 3, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 3, 1);
     const cabinetMat = SharedMaterials.aubergineMauve;
     const base = new THREE.Mesh(new THREE.BoxGeometry(6.4, 2.0, 6.4), cabinetMat);
     base.position.y = 1.0;
@@ -1894,7 +1894,7 @@ export class AttractionsManager {
     arena.position.copy(center);
     this.group.add(arena);
 
-    const cobbleTex = loadTiledTexture('/assets/textures/tex_cobblestone.png', 5, 5);
+    const cobbleTex = loadTiledTexture('./assets/textures/tex_cobblestone.png', 5, 5);
     const floor = new THREE.Mesh(
       new THREE.CylinderGeometry(12.2, 12.6, 0.35, 48),
       new THREE.MeshStandardMaterial({ map: cobbleTex, color: '#53356b', roughness: 0.45 })
@@ -1984,7 +1984,7 @@ export class AttractionsManager {
     booth.rotation.y = -Math.PI * 0.62;
     this.group.add(booth);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 3, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 3, 1);
     const bakeryWall = new THREE.Mesh(new THREE.BoxGeometry(7.6, 5.2, 2.6), createPlushMaterial('#fff0e8'));
     bakeryWall.position.set(0, 2.6, -1.6);
     bakeryWall.castShadow = true;
@@ -2065,7 +2065,7 @@ export class AttractionsManager {
     tent.rotation.y = -Math.PI / 2;
     this.group.add(tent);
 
-    const canopyTex = loadTiledTexture('/assets/textures/tex_carousel_canopy.png', 3, 1);
+    const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 3, 1);
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(8.2, 4.8, 0.6), createPlushMaterial('#2a183f'));
     backWall.position.set(0, 2.5, -2.4);
     backWall.castShadow = true;

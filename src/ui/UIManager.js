@@ -244,38 +244,38 @@ export class UIManager {
       <div class="comfy-card">
         <h4>🍆 官方三茄子参考图 → Trellis2 3D GLB</h4>
         <div class="tex-strip">
-          <img src="/assets/reference/ref_standard.png" title="经典款" />
-          <img src="/assets/reference/ref_giant.png" title="大号敦实款" />
-          <img src="/assets/reference/ref_charm.png" title="短腿挂件款" />
-          <img src="/assets/images/aubergine_hero.png" title="棚拍设定" />
+          <img src="./assets/reference/ref_standard.png" title="经典款" />
+          <img src="./assets/reference/ref_giant.png" title="大号敦实款" />
+          <img src="./assets/reference/ref_charm.png" title="短腿挂件款" />
+          <img src="./assets/images/aubergine_hero.png" title="棚拍设定" />
         </div>
         <div class="comfy-status">已由你的 3 张参考图生成 <code>aubergine_standard.glb</code>、<code>aubergine_giant.glb</code>、<code>aubergine_charm.glb</code>，正陈列于圣茄城堡展亭！</div>
       </div>
       <div class="comfy-card">
         <h4>🗺️ Qwen 2.1 · 4.0 非对称五片区总平图 & 城堡原画</h4>
         <div class="tex-strip">
-          <img src="/assets/images/park_master_map.png" title="Qieland 4.0 非对称五区总平图" />
-          <img src="/assets/images/concept_castle.png" title="城堡原画" />
-          <img src="/assets/images/train_solo_ref.png" title="蒸汽小火车原画" />
-          <img src="/assets/images/castle_solo_ref.png" title="城堡立体白模" />
+          <img src="./assets/images/park_master_map.png" title="Qieland 4.0 非对称五区总平图" />
+          <img src="./assets/images/concept_castle.png" title="城堡原画" />
+          <img src="./assets/images/train_solo_ref.png" title="蒸汽小火车原画" />
+          <img src="./assets/images/castle_solo_ref.png" title="城堡立体白模" />
         </div>
         <div class="comfy-status">已生成 <code>park_master_map.png</code>、<code>train_locomotive.glb</code>、<code>castle_royal.glb</code> 实时置入乐园！</div>
       </div>
       <div class="comfy-card">
         <h4>🧱 九套无缝 PBR 地砖、苔藓森林、城堡砖石与顶篷纹理</h4>
         <div class="tex-strip">
-          <img src="/assets/textures/tex_cobblestone.png" title="广场拼花砖" />
-          <img src="/assets/textures/tex_patisserie_tile.png" title="甜品湾马赛克地砖" />
-          <img src="/assets/textures/tex_forest_moss.png" title="邦尼兔林地苔藓" />
-          <img src="/assets/textures/tex_wood.png" title="蜂蜜橡木栈道" />
+          <img src="./assets/textures/tex_cobblestone.png" title="广场拼花砖" />
+          <img src="./assets/textures/tex_patisserie_tile.png" title="甜品湾马赛克地砖" />
+          <img src="./assets/textures/tex_forest_moss.png" title="邦尼兔林地苔藓" />
+          <img src="./assets/textures/tex_wood.png" title="蜂蜜橡木栈道" />
         </div>
         <div class="comfy-status">五大片区各具专属地面材质贴图，雨天自动呈现湿润镜面反光！</div>
       </div>
       <div class="comfy-card">
         <h4>🎬 LTX-2.3 巨幕巡游视频 & 原声配乐</h4>
-        <video src="/assets/video/jumbo_parade.mp4" controls loop muted playsinline poster="/assets/images/castle_jumbo_frame.png"></video>
-        <audio controls src="/assets/audio/bgm_day.flac"></audio>
-        <audio controls src="/assets/audio/bgm_parade.flac"></audio>
+        <video src="./assets/video/jumbo_parade.mp4" controls loop muted playsinline poster="./assets/images/castle_jumbo_frame.png"></video>
+        <audio controls src="./assets/audio/bgm_day.flac"></audio>
+        <audio controls src="./assets/audio/bgm_parade.flac"></audio>
       </div>
     `;
   }
