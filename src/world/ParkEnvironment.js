@@ -21,6 +21,7 @@ import {
   createMeanderingRiverGeometry,
   createRiverBankCurbGeometry,
 } from './WaterShader.js';
+import { getDeviceProfile, optimizeRigidGroup, optimizeStaticScene } from './SceneOptimizer.js';
 
 function createOnionDomeGeometry(radius = 3.2, height = 6.8) {
   const pts = [];
@@ -231,16 +232,53 @@ export class ParkEnvironment {
     this._buildThemedZoneVillages();
     this._buildHighDensityFoliageAndGardens();
     this._buildParadeFloat();
+
+    // Spatially batch all static park architecture/props while preserving every animated/dynamic object
+    const dynamicObjects = [
+      this.windmillRotor,
+      this.waterwheel,
+      this.lighthouseBeacon,
+      this.paradeFloat,
+      ...this.canalShowDancers.map((d) => d.mesh),
+      ...this.mushrooms.map((m) => m.mesh),
+      ...this.waterfallDrops,
+      ...this.lilyPads.map((lp) => lp.mesh),
+      ...this.exhibitModels.map((e) => e.mesh),
+      ...this.fountainDroplets,
+      ...this.balloons,
+    ];
+    const protectedMaterials = new Set([this.lampBulbMat, ...this.pavingMaterials]);
+    if (this.jumboMat) protectedMaterials.add(this.jumboMat);
+
+    this.optimizationStats = optimizeStaticScene(this.group, {
+      dynamicObjects,
+      protectedMaterials,
+      chunkSize: 120,
+      minShadowRadius: 1.35,
+      label: 'park',
+    });
+
+    // Also batch static geometry inside rigid animated park assemblies
+    for (const b of this.balloons) optimizeRigidGroup(b, { label: 'balloon' });
+    for (const d of this.canalShowDancers) optimizeRigidGroup(d.mesh, { label: 'dancer' });
+    for (const m of this.mushrooms) optimizeRigidGroup(m.mesh, { label: 'mushroom' });
+    if (this.windmillRotor) optimizeRigidGroup(this.windmillRotor, { label: 'windmill' });
+    if (this.waterwheel) optimizeRigidGroup(this.waterwheel, { label: 'waterwheel' });
+    if (this.paradeFloat) {
+      optimizeRigidGroup(this.paradeFloat, { dynamicObjects: this.paradeStars, label: 'parade' });
+      for (const s of this.paradeStars) optimizeRigidGroup(s, { label: 'parade_star' });
+    }
   }
 
   _buildLighting() {
+    const device = getDeviceProfile();
     this.hemiLight = new THREE.HemisphereLight('#fff5f9', '#7db582', 0.72);
     this.scene.add(this.hemiLight);
 
     this.sunLight = new THREE.DirectionalLight('#fff2dc', 1.32);
     this.sunLight.position.set(48, 76, 42);
     this.sunLight.castShadow = true;
-    this.sunLight.shadow.mapSize.set(2048, 2048);
+    this.sunLight.shadow.mapSize.set(device.shadowMapSize, device.shadowMapSize);
     this.sunLight.shadow.camera.near = 5;
     this.sunLight.shadow.camera.far = 280;
     const d = 115;
@@ -569,11 +607,10 @@ export class ParkEnvironment {
       fountain.add(stream);
     }
 
+    const dropGeo = new THREE.SphereGeometry(0.11, 6, 6);
+    const dropMat = new THREE.MeshBasicMaterial({ color: '#e6fbff', transparent: true, opacity: 0.82 });
     for (let i = 0; i < 28; i++) {
-      const drop = new THREE.Mesh(
-        new THREE.SphereGeometry(0.11, 8, 8),
-        new THREE.MeshBasicMaterial({ color: '#e6fbff', transparent: true, opacity: 0.82 })
-      );
+      const drop = new THREE.Mesh(dropGeo, dropMat);
       drop.userData = { angle: (i / 28) * Math.PI * 2, phase: (i % 7) / 7 };
       fountain.add(drop);
       this.fountainDroplets.push(drop);
@@ -581,8 +618,8 @@ export class ParkEnvironment {
 
     const stalkMat = new THREE.MeshStandardMaterial({ color: '#5b8a4e', roughness: 0.85 });
     const lavMat = new THREE.MeshStandardMaterial({ color: '#9f6be0', roughness: 0.72 });
-    const stalkGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.45, 6);
-    const bloomGeo = new THREE.CapsuleGeometry(0.06, 0.22, 4, 8);
+    const stalkGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.45, 5);
+    const bloomGeo = new THREE.ConeGeometry(0.075, 0.28, 5);
     const stalkMats = [];
     const bloomMats = [];
     const dummy = new THREE.Object3D();
@@ -631,7 +668,7 @@ export class ParkEnvironment {
     const wallTex = loadTiledTexture('./assets/textures/tex_castle_wall.png', 2, 3);
     const domeTex = loadTiledTexture('./assets/textures/tex_onion_dome.png', 3, 2);
     const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, color: '#9c6890', roughness: 0.84 });
-    const domeMat = new THREE.MeshPhysicalMaterial({ map: domeTex, color: '#7b924e', roughness: 0.48, metalness: 0.15, sheen: 0.35 });
+    const domeMat = new THREE.MeshStandardMaterial({ map: domeTex, color: '#7b924e', roughness: 0.48, metalness: 0.15 });
     const creamMat = new THREE.MeshStandardMaterial({ color: '#e6d2c3', roughness: 0.64 });
 
     for (const xSign of [-1, 1]) {
@@ -679,13 +716,11 @@ export class ParkEnvironment {
       color: '#825277',
       roughness: 0.88,
     });
-    const domeMat = new THREE.MeshPhysicalMaterial({
+    const domeMat = new THREE.MeshStandardMaterial({
       map: domeTex,
       color: '#7a914d',
       roughness: 0.46,
       metalness: 0.16,
-      sheen: 0.35,
-      sheenColor: new THREE.Color('#c8d99a'),
     });
     const creamTrimMat = new THREE.MeshStandardMaterial({ color: '#e2ccbd', roughness: 0.66 });
     const stainedGlassMat = new THREE.MeshStandardMaterial({
@@ -946,79 +981,79 @@ export class ParkEnvironment {
     maquettePed.add(pedBase, pedRing);
     this.group.add(maquettePed);
     this.layout.addCollider('circle', 8.0, -22.5, 2.4);
-      loadComfyGLB('./assets/models/castle_royal.glb', 3.4).then((glb) => {
+    loadComfyGLB('./assets/models/castle_royal.glb', 3.4).then((glb) => {
+      if (glb) {
+        glb.position.y = 0.88;
+        maquettePed.add(glb);
+        this.exhibitModels.push({ mesh: glb });
+      }
+    });
+
+    const video = document.createElement('video');
+    video.src = './assets/video/jumbo_parade.mp4';
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.crossOrigin = 'anonymous';
+    video.addEventListener('canplay', () => {
+      const vTex = new THREE.VideoTexture(video);
+      vTex.colorSpace = THREE.SRGBColorSpace;
+      this.jumboMat.map = vTex;
+      this.jumboMat.needsUpdate = true;
+      video.play().catch(() => { });
+    });
+    video.load();
+    this.videoEl = video;
+
+    const castleLight = new THREE.PointLight('#ffd699', 0, 56);
+    castleLight.position.set(0, 16, 12);
+    castle.add(castleLight);
+    this.nightLights.push({ light: castleLight, maxIntensity: 6.5 });
+
+    // Three Official Aubergine ComfyUI GLB Exhibition Pedestals atop the +1.8m Royal Balcony!
+    const exhibitSpecs = [
+      { url: './assets/models/aubergine_standard.glb', fallback: 'aubergine_standard', x: -10.5, z: -32.2 },
+      { url: './assets/models/aubergine_giant.glb', fallback: 'aubergine_giant', x: -6.0, z: -31.2 },
+      { url: './assets/models/aubergine_charm.glb', fallback: 'aubergine_charm', x: -1.5, z: -32.2 },
+    ];
+    for (const ex of exhibitSpecs) {
+      const ped = new THREE.Group();
+      ped.position.set(ex.x, CASTLE_PLATEAU.height + 0.08, ex.z);
+      const baseCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.35, 0.82, 24), createPlushMaterial('#d4bce2'));
+      baseCyl.position.y = 0.41;
+      baseCyl.castShadow = true;
+      const trim = new THREE.Mesh(new THREE.TorusGeometry(1.16, 0.08, 10, 24), SharedMaterials.gold);
+      trim.rotation.x = Math.PI / 2;
+      trim.position.y = 0.82;
+      ped.add(baseCyl, trim);
+
+      const statue = createJellycatCharacter(ex.fallback, { scale: 1.15 });
+      statue.position.y = 0.85;
+      ped.add(statue);
+      this.group.add(ped);
+      this.layout.addCollider('circle', ex.x, ex.z, 1.35);
+
+      const entry = { mesh: statue };
+      this.exhibitModels.push(entry);
+
+      loadComfyGLB(ex.url, 1.65).then((glb) => {
         if (glb) {
-          glb.position.y = 0.88;
-          maquettePed.add(glb);
-          this.exhibitModels.push({ mesh: glb });
+          ped.remove(statue);
+          glb.position.y = 0.85;
+          ped.add(glb);
+          entry.mesh = glb;
         }
       });
-
-      const video = document.createElement('video');
-      video.src = './assets/video/jumbo_parade.mp4';
-      video.loop = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.crossOrigin = 'anonymous';
-      video.addEventListener('canplay', () => {
-        const vTex = new THREE.VideoTexture(video);
-        vTex.colorSpace = THREE.SRGBColorSpace;
-        this.jumboMat.map = vTex;
-        this.jumboMat.needsUpdate = true;
-        video.play().catch(() => { });
-      });
-      video.load();
-      this.videoEl = video;
-
-      const castleLight = new THREE.PointLight('#ffd699', 0, 56);
-      castleLight.position.set(0, 16, 12);
-      castle.add(castleLight);
-      this.nightLights.push({ light: castleLight, maxIntensity: 6.5 });
-
-      // Three Official Aubergine ComfyUI GLB Exhibition Pedestals atop the +1.8m Royal Balcony!
-      const exhibitSpecs = [
-        { url: './assets/models/aubergine_standard.glb', fallback: 'aubergine_standard', x: -10.5, z: -32.2 },
-        { url: './assets/models/aubergine_giant.glb', fallback: 'aubergine_giant', x: -6.0, z: -31.2 },
-        { url: './assets/models/aubergine_charm.glb', fallback: 'aubergine_charm', x: -1.5, z: -32.2 },
-      ];
-      for (const ex of exhibitSpecs) {
-        const ped = new THREE.Group();
-        ped.position.set(ex.x, CASTLE_PLATEAU.height + 0.08, ex.z);
-        const baseCyl = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.35, 0.82, 24), createPlushMaterial('#d4bce2'));
-        baseCyl.position.y = 0.41;
-        baseCyl.castShadow = true;
-        const trim = new THREE.Mesh(new THREE.TorusGeometry(1.16, 0.08, 10, 24), SharedMaterials.gold);
-        trim.rotation.x = Math.PI / 2;
-        trim.position.y = 0.82;
-        ped.add(baseCyl, trim);
-
-        const statue = createJellycatCharacter(ex.fallback, { scale: 1.15 });
-        statue.position.y = 0.85;
-        ped.add(statue);
-        this.group.add(ped);
-        this.layout.addCollider('circle', ex.x, ex.z, 1.35);
-
-        const entry = { mesh: statue };
-        this.exhibitModels.push(entry);
-
-        loadComfyGLB(ex.url, 1.65).then((glb) => {
-          if (glb) {
-            ped.remove(statue);
-            glb.position.y = 0.85;
-            ped.add(glb);
-            entry.mesh = glb;
-          }
-        });
-      }
     }
+  }
 
   _buildThemedZoneLandmarks() {
-      // === ZONE 2 SE: Patisserie Bay Golden Croissant Archway + 3-Tier Macaron Tower ===
-      const croissantArch = new THREE.Group();
-      croissantArch.position.set(44, 0, 23);
-      croissantArch.rotation.y = 1.08;
-      const macColors = ['#ffa8c5', '#a5f3fc', '#fde68a', '#d8b4fe'];
-      for(const side of [- 4.2, 4.2]) {
+    // === ZONE 2 SE: Patisserie Bay Golden Croissant Archway + 3-Tier Macaron Tower ===
+    const croissantArch = new THREE.Group();
+    croissantArch.position.set(44, 0, 23);
+    croissantArch.rotation.y = 1.08;
+    const macColors = ['#ffa8c5', '#a5f3fc', '#fde68a', '#d8b4fe'];
+    for (const side of [- 4.2, 4.2]) {
       for (let m = 0; m < 4; m++) {
         const mac = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.9, 20), createPlushMaterial(macColors[m]));
         mac.position.set(side, 0.5 + m * 1.15, 0);
@@ -1053,7 +1088,7 @@ export class ParkEnvironment {
     this.layout.addCollider('circle', 81, 48, 2.2);
 
     // === ZONE 3 NE: Thrill Peak Crystal Clusters & Steampunk Gear Arch ===
-    const crystalMat = new THREE.MeshPhysicalMaterial({
+    const crystalMat = new THREE.MeshStandardMaterial({
       color: '#a855f7',
       emissive: '#7e22ce',
       emissiveIntensity: 0.45,
@@ -1083,10 +1118,7 @@ export class ParkEnvironment {
         sp.rotation.z = (k - 1.5) * 0.22;
         rock.add(sp);
       }
-      const cl = new THREE.PointLight('#c084fc', 0, 18);
-      cl.position.y = 2.6 * s;
-      rock.add(cl);
-      this.nightLights.push({ light: cl, maxIntensity: 3.2 });
+      // Glowing emissive crystals provide ambient mood without spawning 6 shader-expensive PointLights
       this.group.add(rock);
       this.layout.addCollider('circle', cx, cz, 1.7 * s);
     }
@@ -1699,7 +1731,7 @@ export class ParkEnvironment {
     bladeGeo.translate(0, 0.24, 0);
     const bladeMat = new THREE.MeshStandardMaterial({ color: '#6cb862', roughness: 0.85 });
 
-    const flowerGeo = new THREE.DodecahedronGeometry(0.14, 0);
+    const flowerGeo = new THREE.OctahedronGeometry(0.14, 0);
     flowerGeo.translate(0, 0.3, 0);
     const flowerMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.7 });
 
@@ -1719,8 +1751,9 @@ export class ParkEnvironment {
       return (seed - 1) / 2147483646;
     };
 
+    const device = getDeviceProfile();
     const dummy = new THREE.Object3D();
-    for (let i = 0; i < 24000 && grassMatrices.length < 12000; i++) {
+    for (let i = 0; i < 24000 && grassMatrices.length < device.grassCount; i++) {
       const ang = rand() * Math.PI * 2;
       const rad = 25 + rand() * 102;
       const x = Math.cos(ang) * rad;
@@ -1734,7 +1767,7 @@ export class ParkEnvironment {
       dummy.updateMatrix();
       grassMatrices.push(dummy.matrix.clone());
 
-      if (i % 3 === 0 && flowerMatrices.length < 4200) {
+      if (i % 3 === 0 && flowerMatrices.length < device.flowerCount) {
         dummy.position.set(x + 0.16, 0, z + 0.16);
         dummy.scale.setScalar(0.75 + rand() * 0.55);
         dummy.updateMatrix();
@@ -1828,7 +1861,7 @@ export class ParkEnvironment {
 
     const trunkInst = new THREE.InstancedMesh(trunkGeo, trunkInstMat, trunkMatrices.length);
     trunkMatrices.forEach((m, idx) => trunkInst.setMatrixAt(idx, m));
-    trunkInst.castShadow = true;
+    trunkInst.castShadow = false;
     this.group.add(trunkInst);
 
     const puffInst = new THREE.InstancedMesh(puffGeo, canopyMat, puffMatrices.length);
@@ -1836,7 +1869,7 @@ export class ParkEnvironment {
       puffInst.setMatrixAt(idx, m);
       puffInst.setColorAt(idx, puffColors[idx]);
     });
-    puffInst.castShadow = true;
+    puffInst.castShadow = false;
     puffInst.receiveShadow = true;
     this.group.add(puffInst);
 
@@ -1962,12 +1995,7 @@ export class ParkEnvironment {
       const banner = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 1.2), bannerMat);
       banner.position.set(0.35, 3.2, 0);
       lamp.add(base, stem, bulb, banner);
-      if (i < 7) {
-        const pt = new THREE.PointLight('#ffd278', 0, 22);
-        pt.position.y = 4.5;
-        lamp.add(pt);
-        this.nightLights.push({ light: pt, maxIntensity: 3.0 });
-      }
+      // Emissive lampBulbMat glows brightly at dusk/night without multiplying NUM_POINT_LIGHTS across every shader
       this.group.add(lamp);
       this.layout.addCollider('circle', lx, lz, 0.45);
     }
@@ -2211,8 +2239,12 @@ export class ParkEnvironment {
     }
 
     for (const lp of this.lilyPads) {
-      lp.mesh.position.y = -0.20 + Math.sin(elapsed * 1.8 + lp.phase) * 0.035;
-      lp.mesh.rotation.z = Math.sin(elapsed * 1.3 + lp.phase) * 0.04;
+      if (lp.isGroup) {
+        lp.mesh.position.y = Math.sin(elapsed * 1.8) * 0.032;
+      } else {
+        lp.mesh.position.y = -0.20 + Math.sin(elapsed * 1.8 + lp.phase) * 0.035;
+        lp.mesh.rotation.z = Math.sin(elapsed * 1.3 + lp.phase) * 0.04;
+      }
     }
 
     for (const ex of this.exhibitModels) {

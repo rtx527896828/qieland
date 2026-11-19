@@ -42,6 +42,10 @@ export class PlayerController {
 
     this.keys = new Set();
     this.touchStick = { x: 0, y: 0 };
+    this._tmpInputVec = new THREE.Vector3();
+    this._tmpUp = new THREE.Vector3(0, 1, 0);
+    this._tmpTarget = new THREE.Vector3();
+    this._tmpDesiredCam = new THREE.Vector3();
     this._bindInputs();
   }
 
@@ -79,9 +83,10 @@ export class PlayerController {
     });
     window.addEventListener('mousemove', (e) => {
       if (!this.dragging) return;
-      const dx = e.clientX - this.lastMouse.x;
-      const dy = e.clientY - this.lastMouse.y;
-      this.lastMouse = { x: e.clientX, y: e.clientY };
+      const dx = THREE.MathUtils.clamp(e.clientX - this.lastMouse.x, -120, 120);
+      const dy = THREE.MathUtils.clamp(e.clientY - this.lastMouse.y, -120, 120);
+      this.lastMouse.x = e.clientX;
+      this.lastMouse.y = e.clientY;
       this.camYaw -= dx * 0.0065;
       this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.005, 0.08, 1.15);
     });
@@ -148,8 +153,8 @@ export class PlayerController {
     const mag = Math.hypot(moveX, moveZ);
     let speed = 0;
     if (mag > 0.08) {
-      const inputVec = new THREE.Vector3(moveX, 0, moveZ).normalize();
-      inputVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.camYaw);
+      const inputVec = this._tmpInputVec.set(moveX, 0, moveZ).normalize();
+      inputVec.applyAxisAngle(this._tmpUp, this.camYaw);
       const analogScale = Math.min(1, mag);
       const walkSpeed = (this.keys.has('ShiftLeft') ? 13.5 : 8.8) * analogScale;
       speed = walkSpeed;
@@ -176,7 +181,7 @@ export class PlayerController {
 
     animateJellycatRig(this.mesh, elapsed, speed, !this.onGround, this.isCheering);
 
-    const target = new THREE.Vector3(
+    const target = this._tmpTarget.set(
       this.root.position.x,
       this.root.position.y + 1.15,
       this.root.position.z
@@ -184,7 +189,7 @@ export class PlayerController {
     const offsetX = Math.sin(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
     const offsetY = Math.sin(this.camPitch) * this.camDist;
     const offsetZ = Math.cos(this.camYaw) * Math.cos(this.camPitch) * this.camDist;
-    const desiredCam = new THREE.Vector3(
+    const desiredCam = this._tmpDesiredCam.set(
       target.x + offsetX,
       Math.max(groundY + 0.6, target.y + offsetY),
       target.z + offsetZ

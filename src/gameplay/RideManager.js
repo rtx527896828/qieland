@@ -84,6 +84,7 @@ export class RideManager {
   enterRide(rideId) {
     if (this.activeRide) return;
     this.activeRide = rideId;
+    this.attractions.setActiveIndoorRide?.(rideId);
     this.player.enabled = false;
     this.firstPerson = false;
     this.snapCameraNext = true;
@@ -336,6 +337,7 @@ export class RideManager {
       this.player.teleportTo(pad.pos);
     }
     this.activeRide = null;
+    this.attractions.setActiveIndoorRide?.(null);
     this.isAtFerrisPeak = false;
     this.player.enabled = true;
     this.ui.hideRideHud();

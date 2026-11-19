@@ -281,7 +281,11 @@ export class TouchController {
 
   setInteractActive(active, label = '互动') {
     if (!this.btnInteract) return;
+    const text = active ? `✨ ${label}` : 'E 互动';
+    if (this._lastInteractActive === active && this._lastInteractText === text) return;
+    this._lastInteractActive = active;
+    this._lastInteractText = text;
     this.btnInteract.classList.toggle('ready', active);
-    this.btnInteract.textContent = active ? `✨ ${label}` : 'E 互动';
+    this.btnInteract.textContent = text;
   }
 }

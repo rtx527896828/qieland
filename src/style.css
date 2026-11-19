@@ -939,6 +939,20 @@ body {
   transform: scale(1.06);
 }
 
+/* Disable expensive live-canvas backdrop-filter blurs on iPad / touch devices */
+@media (pointer: coarse) {
+  .brand-pill,
+  .stat-pill,
+  .icon-btn,
+  .hud-btn,
+  .interact-prompt,
+  .touch-joystick,
+  .touch-mini-btn {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 /* iPad & Tablet Responsive HUD Polish */
 @media (max-width: 1180px) {
   .hud-top-left,

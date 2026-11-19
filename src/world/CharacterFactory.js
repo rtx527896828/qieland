@@ -897,6 +897,12 @@ export function animateJellycatRig(character, time, speed = 0, isJumping = false
   }
 }
 
+let glbPrecompiler = null;
+
+export function setGlbCompiler(fn) {
+  glbPrecompiler = fn;
+}
+
 export async function loadComfyGLB(url, targetHeight = 1.4) {
   try {
     const head = await fetch(url, { method: 'HEAD' });
@@ -909,11 +915,12 @@ export async function loadComfyGLB(url, targetHeight = 1.4) {
     const loader = new GLTFLoader();
     loader.load(
       url,
-      (gltf) => {
+      async (gltf) => {
         const model = gltf.scene;
+        const castSh = !(typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1);
         model.traverse((child) => {
           if (child.isMesh) {
-            child.castShadow = true;
+            child.castShadow = castSh;
             child.receiveShadow = true;
           }
         });
@@ -943,6 +950,11 @@ export async function loadComfyGLB(url, targetHeight = 1.4) {
           baseBodyY: model.position.y,
           baseScale: model.scale.clone(),
         };
+        if (glbPrecompiler) {
+          try {
+            await glbPrecompiler(wrapper);
+          } catch {}
+        }
         resolve(wrapper);
       },
       undefined,

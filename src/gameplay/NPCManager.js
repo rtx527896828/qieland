@@ -4,6 +4,7 @@ import {
   animateJellycatRig,
   createJellycatCharacter,
 } from '../world/CharacterFactory.js';
+import { optimizeRigidGroup } from '../world/SceneOptimizer.js';
 
 export class NPCManager {
   constructor(scene, ui, audio, layout) {
@@ -33,19 +34,27 @@ export class NPCManager {
       { id: 'boiled_egg', pos: new THREE.Vector3(5.8, 0.08, 8.5), rot: -0.4 },
     ];
 
+    const markerGeo = new THREE.OctahedronGeometry(0.16);
+    const markerMat = new THREE.MeshStandardMaterial({
+      color: '#ffd466',
+      emissive: '#ffa826',
+      emissiveIntensity: 0.45,
+    });
+
     for (const p of placements) {
       const info = JELLYCAT_ROSTER.find((r) => r.id === p.id);
       if (!info) continue;
       const mesh = createJellycatCharacter(p.id, { scale: 1.02 });
+      const rig = mesh.userData?.rig;
+      if (rig?.torsoGroup) {
+        optimizeRigidGroup(rig.torsoGroup, { minShadowRadius: 0.35, label: 'npc_torso' });
+      }
       const groundY = this.layout.getGroundHeight(p.pos.x, p.pos.z);
       mesh.position.set(p.pos.x, groundY, p.pos.z);
       mesh.rotation.y = p.rot;
       this.scene.add(mesh);
 
-      const marker = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.16),
-        new THREE.MeshStandardMaterial({ color: '#ffd466', emissive: '#ffa826', emissiveIntensity: 0.45 })
-      );
+      const marker = new THREE.Mesh(markerGeo, markerMat);
       marker.position.y = 1.9;
       mesh.add(marker);
 

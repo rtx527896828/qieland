@@ -11,6 +11,7 @@ import {
   getTrainTrackRadius,
   ZONE_CENTERS,
 } from './ParkLayout.js';
+import { optimizeRigidGroup, optimizeStaticScene } from './SceneOptimizer.js';
 
 export class AttractionsManager {
   constructor(scene, layout) {
@@ -64,6 +65,144 @@ export class AttractionsManager {
     this._buildDartBoothGame();
     this._buildCarnivalHoops();
     this._buildRingTossBooth();
+
+    // Single shared indoor ride PointLight (replaces 3 always-on PointLights)
+    this.indoorLight = new THREE.PointLight('#d946ef', 0, 26);
+    this.indoorLight.position.set(0, -50, 0);
+    this.group.add(this.indoorLight);
+
+    // Spatially batch all static attraction geometry (tracks, pillars, stations, booths, shells)
+    // while keeping every moving ride car, rotor, mini-game target, and animated prop untouched.
+    const dynamicObjects = [
+      this.train?.loco,
+      ...(this.train?.carriages || []),
+      ...(this.train?.smokePuffs?.map((p) => p.mesh) || []),
+      ...(this.coaster?.cars || []),
+      ...(this.spaceCoaster?.cars || []),
+      this.spaceCoaster?.planet,
+      ...(this.spaceCoaster?.astronauts?.map((a) => a.mesh) || []),
+      ...(this.haunted?.cars || []),
+      ...(this.haunted?.ghosts?.map((g) => g.mesh) || []),
+      ...(this.haunted?.candles?.map((c) => c.mesh) || []),
+      this.haunted?.crystalBall,
+      ...(this.buzz?.cars || []),
+      this.buzz?.boss,
+      ...(this.buzz?.targets?.map((t) => t.mesh) || []),
+      ...(this.splash?.boats || []),
+      ...(this.splash?.splashDrops?.map((d) => d.mesh) || []),
+      this.ferris?.rotor,
+      ...(this.boats?.list?.map((b) => b.group) || []),
+      ...(this.boats?.stars?.map((s) => s.mesh) || []),
+      this.teacups?.platter,
+      ...(this.teacups?.steamPuffs?.map((p) => p.mesh) || []),
+      this.dropTower?.carriage,
+      this.galleon?.shipPivot,
+      this.carousel?.spinner,
+      this.carousel?.finial,
+      ...(this.whackGarden?.holes?.map((h) => h.mesh) || []),
+      this.clawMachine?.clawPivot,
+      this.clawMachine?.cable,
+      this.clawMachine?.clawHead,
+      this.clawMachine?.aimRing,
+      ...(this.clawMachine?.prizes?.map((p) => p.mesh) || []),
+      ...(this.bumperArena?.cars?.map((c) => c.mesh) || []),
+      ...(this.bumperArena?.bouncePosts?.map((bp) => bp.ring) || []),
+      this.pastryGame?.chef,
+      this.pastryGame?.tray,
+      ...(this.pastryGame?.items?.map((it) => it.mesh) || []),
+      ...(this.dartsGame?.targets?.map((t) => t.mesh) || []),
+      this.hoopsGame?.hoopAssembly,
+      this.hoopsGame?.ball,
+      ...(this.ringTossGame?.pegs?.map((p) => p.mesh) || []),
+      this.ringTossGame?.aimRing,
+    ];
+
+    this.optimizationStats = optimizeStaticScene(this.group, {
+      dynamicObjects,
+      chunkSize: 120,
+      minShadowRadius: 1.5,
+      label: 'attractions',
+    });
+
+    // Collapse static meshes inside rigid moving ride assemblies (each car/gondola/cup/boat/mount
+    // drops from 20-180 draw calls down to ~3-6 local-space batched meshes!)
+    const rigidTargets = [
+      ...(this.train?.carriages || []),
+      ...(this.coaster?.cars || []),
+      ...(this.spaceCoaster?.cars || []),
+      this.spaceCoaster?.planet,
+      ...(this.spaceCoaster?.astronauts?.map((a) => a.mesh) || []),
+      ...(this.haunted?.cars || []),
+      ...(this.haunted?.ghosts?.map((g) => g.mesh) || []),
+      ...(this.haunted?.candles?.map((c) => c.mesh) || []),
+      ...(this.buzz?.cars || []),
+      ...(this.splash?.boats || []),
+      ...(this.ferris?.gondolas || []),
+      ...(this.boats?.list?.map((b) => b.group) || []),
+      ...(this.teacups?.cups || []),
+      this.dropTower?.carriage,
+      this.galleon?.shipPivot,
+      ...(this.carousel?.mounts?.map((m) => m.mesh) || []),
+      ...(this.whackGarden?.holes?.map((h) => h.mesh) || []),
+      ...(this.clawMachine?.prizes?.map((p) => p.mesh) || []),
+      ...(this.bumperArena?.cars?.map((c) => c.mesh) || []),
+      this.pastryGame?.chef,
+      ...(this.ringTossGame?.pegs?.map((p) => p.mesh) || []),
+    ];
+    for (const rg of rigidTargets) {
+      if (rg) optimizeRigidGroup(rg, { minShadowRadius: 1.4, label: 'ride_part' });
+    }
+    if (this.ferris?.rotor) {
+      optimizeRigidGroup(this.ferris.rotor, {
+        dynamicObjects: this.ferris.gondolas,
+        minShadowRadius: 2.0,
+        label: 'ferris_rotor',
+      });
+    }
+    if (this.teacups?.platter) {
+      optimizeRigidGroup(this.teacups.platter, {
+        dynamicObjects: [
+          ...(this.teacups.cups || []),
+          ...(this.teacups.steamPuffs?.map((p) => p.mesh) || []),
+        ],
+        minShadowRadius: 1.8,
+        label: 'teacups_platter',
+      });
+    }
+    if (this.carousel?.spinner) {
+      optimizeRigidGroup(this.carousel.spinner, {
+        dynamicObjects: this.carousel.mounts?.map((m) => m.mesh) || [],
+        minShadowRadius: 1.8,
+        label: 'carousel_spinner',
+      });
+    }
+  }
+
+  setActiveIndoorRide(rideId) {
+    if (!this.indoorLight) return;
+    if (rideId === 'coaster' && this.coaster?.interiorCenter) {
+      const p = this.coaster.interiorCenter;
+      this.indoorLight.position.set(p.x, 6.5, p.z);
+      this.indoorLight.color.set('#d946ef');
+      this.indoorLight.intensity = 5.0;
+    } else if (rideId === 'spacecoaster' && this.spaceCoaster?.origin) {
+      const p = this.spaceCoaster.origin;
+      this.indoorLight.position.set(p.x, 10.5, p.z);
+      this.indoorLight.color.set('#818cf8');
+      this.indoorLight.intensity = 4.2;
+    } else if (rideId === 'haunted' && this.haunted?.origin) {
+      const p = this.haunted.origin;
+      this.indoorLight.position.set(p.x, 8.2, p.z);
+      this.indoorLight.color.set('#a855f7');
+      this.indoorLight.intensity = 4.5;
+    } else if (rideId === 'buzz' && this.buzz?.origin) {
+      const p = this.buzz.origin;
+      this.indoorLight.position.set(p.x, 8.2, p.z);
+      this.indoorLight.color.set('#22d3ee');
+      this.indoorLight.intensity = 4.2;
+    } else {
+      this.indoorLight.intensity = 0;
+    }
   }
 
   _addStationPad(pos, color = '#ffd257') {
@@ -460,9 +599,6 @@ export class AttractionsManager {
     // Underground Scene Props inside the Cavern (visible as cars wind inside!)
     const crystalGlowMat = new THREE.MeshStandardMaterial({ color: '#d8b4fe', emissive: '#a855f7', emissiveIntensity: 1.25 });
     const mushNeonMat = new THREE.MeshStandardMaterial({ color: '#ff70a6', emissive: '#ff2e88', emissiveIntensity: 1.15 });
-    const cavLight = new THREE.PointLight('#d946ef', 5.0, 22);
-    cavLight.position.set(0, 6.5, 0);
-    mGroup.add(cavLight);
 
     for (let s = 0; s < 16; s++) {
       const a = (s / 16) * Math.PI * 2;
@@ -532,7 +668,7 @@ export class AttractionsManager {
     this.group.add(domeGroup);
 
     // Monumental 100% Sealed Space Mountain Building: Cylindrical Drum (r=17.6, y=0..14.2) + Fluted Cone Roof (y=14.2..28.7)
-    const extMat = new THREE.MeshPhysicalMaterial({ color: '#eef2ff', roughness: 0.32, metalness: 0.25, clearcoat: 0.5 });
+    const extMat = new THREE.MeshStandardMaterial({ color: '#eef2ff', roughness: 0.28, metalness: 0.32 });
     const intDarkMat = new THREE.MeshBasicMaterial({ color: '#020109', side: THREE.BackSide });
     const neonCyanMat = new THREE.MeshStandardMaterial({ color: '#22d3ee', emissive: '#06b6d4', emissiveIntensity: 1.5 });
     const neonPinkMat = new THREE.MeshStandardMaterial({ color: '#f472b6', emissive: '#ec4899', emissiveIntensity: 1.4 });
@@ -790,10 +926,6 @@ export class AttractionsManager {
       candles.push({ mesh: candle, baseY: candle.position.y, phase: k * 0.7 });
     }
 
-    const mansionLight = new THREE.PointLight('#a855f7', 4.0, 22);
-    mansionLight.position.set(0, 8.2, 0);
-    manor.add(mansionLight);
-
     // 100% Indoor Sinuous Doom Buggy Track strictly inside |dx| <= 7.8, |dz| <= 6.8 (wall at ±11.6, ±10.6 => >=3.8m clearance!)
     const pts = [
       new THREE.Vector3(c.x + 7.4, 1.1, c.z + 6.4),
@@ -913,10 +1045,6 @@ export class AttractionsManager {
     boss.add(bossBody, bossCrown, bossCore);
     fortress.add(boss);
     targets.push({ index: targetSpecs.length, mesh: boss, bullseye: bossCore, points: 500, cooldown: 0, baseY: 1.0, isBoss: true });
-
-    const bayLight = new THREE.PointLight('#22d3ee', 3.8, 22);
-    bayLight.position.set(0, 8.2, 0);
-    fortress.add(bayLight);
 
     // 100% Indoor Space Cruiser Track strictly inside |dx| <= 7.4, |dz| <= 6.6
     const pts = [
@@ -1461,7 +1589,7 @@ export class AttractionsManager {
     const domeTex = loadTiledTexture('./assets/textures/tex_onion_dome.png', 3, 2);
     const crownCap = new THREE.Mesh(
       new THREE.CylinderGeometry(2.6, 2.8, 0.8, 28),
-      new THREE.MeshPhysicalMaterial({ map: domeTex, color: '#7f9452', roughness: 0.48 })
+      new THREE.MeshStandardMaterial({ map: domeTex, color: '#7f9452', roughness: 0.48 })
     );
     crownCap.position.y = 28.0;
     const crownRim = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.16, 10, 28), SharedMaterials.gold);
@@ -1644,11 +1772,9 @@ export class AttractionsManager {
     this.layout.addCollider('circle', center.x, center.z, 1.6);
 
     const canopyTex = loadTiledTexture('./assets/textures/tex_carousel_canopy.png', 5, 1);
-    const canopyMat = new THREE.MeshPhysicalMaterial({
+    const canopyMat = new THREE.MeshStandardMaterial({
       map: canopyTex,
       roughness: 0.65,
-      sheen: 0.4,
-      sheenColor: new THREE.Color('#ffeef6'),
     });
     const canopy = new THREE.Mesh(new THREE.ConeGeometry(8.6, 3.3, 40), canopyMat);
     canopy.position.y = 8.6;
@@ -1816,7 +1942,7 @@ export class AttractionsManager {
     }
     const glassBox = new THREE.Mesh(
       new THREE.BoxGeometry(5.9, 5.0, 5.9),
-      new THREE.MeshPhysicalMaterial({ color: '#eef8ff', transparent: true, opacity: 0.22, roughness: 0.08 })
+      new THREE.MeshStandardMaterial({ color: '#eef8ff', transparent: true, opacity: 0.22, roughness: 0.08, depthWrite: false })
     );
     glassBox.position.y = 4.5;
     const topCap = new THREE.Mesh(new THREE.BoxGeometry(6.8, 1.0, 6.8), cabinetMat);

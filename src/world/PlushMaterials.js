@@ -1,23 +1,49 @@
 import * as THREE from 'three';
+import { getDeviceProfile } from './SceneOptimizer.js';
 
 let cachedPlushBump = null;
 let cachedCorduroyBump = null;
 let cachedCornTexture = null;
 const texLoader = new THREE.TextureLoader();
 const loadedTexCache = new Map();
+const materialCache = new Map();
+const pendingTexturePromises = [];
 
 export function loadTiledTexture(url, repeatX = 1, repeatY = 1) {
   const key = `${url}:${repeatX}:${repeatY}`;
   if (loadedTexCache.has(key)) return loadedTexCache.get(key);
 
-  const tex = texLoader.load(url);
+  let resolveLoad;
+  const loadPromise = new Promise((res) => {
+    resolveLoad = res;
+  });
+  pendingTexturePromises.push(loadPromise);
+
+  const tex = texLoader.load(
+    url,
+    () => resolveLoad(true),
+    undefined,
+    () => resolveLoad(false)
+  );
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(repeatX, repeatY);
-  tex.anisotropy = 8;
+  tex.anisotropy = getDeviceProfile().anisotropy;
   loadedTexCache.set(key, tex);
   return tex;
+}
+
+/**
+ * Waits for all queued textures to finish downloading & decoding (bounded by timeoutMs)
+ * so WebGPU warmup uploads every texture + mipmap once up front instead of stalling mid-drag.
+ */
+export function waitForAllTextures(timeoutMs = 3500) {
+  if (pendingTexturePromises.length === 0) return Promise.resolve();
+  return Promise.race([
+    Promise.allSettled(pendingTexturePromises),
+    new Promise((res) => setTimeout(res, timeoutMs)),
+  ]);
 }
 
 export function createPlushBumpTexture() {
@@ -123,63 +149,116 @@ export function createCornKernelTexture() {
 }
 
 export function createPlushMaterial(colorHex, opts = {}) {
+  const usePhysical = Boolean(opts.physical && getDeviceProfile().usePhysicalPlush);
+  const canCache = !opts.extra;
+  const cacheKey = canCache
+    ? `plush|${colorHex}|${opts.roughness ?? 0.88}|${opts.bumpScale ?? 0.032}|${opts.sheenColor ?? ''}|${usePhysical ? 1 : 0}`
+    : null;
+  if (cacheKey && materialCache.has(cacheKey)) return materialCache.get(cacheKey);
+
   const base = new THREE.Color(colorHex);
-  const sheen = opts.sheenColor
-    ? new THREE.Color(opts.sheenColor)
-    : base.clone().lerp(new THREE.Color('#ffffff'), 0.52);
-  return new THREE.MeshPhysicalMaterial({
-    color: base,
-    roughness: opts.roughness ?? 0.88,
-    metalness: 0.0,
-    sheen: opts.sheen ?? 1.0,
-    sheenRoughness: opts.sheenRoughness ?? 0.52,
-    sheenColor: sheen,
-    bumpMap: createPlushBumpTexture(),
-    bumpScale: opts.bumpScale ?? 0.032,
-    ...opts.extra,
-  });
+  let mat;
+  if (usePhysical) {
+    const sheen = opts.sheenColor
+      ? new THREE.Color(opts.sheenColor)
+      : base.clone().lerp(new THREE.Color('#ffffff'), 0.52);
+    mat = new THREE.MeshPhysicalMaterial({
+      color: base,
+      roughness: opts.roughness ?? 0.88,
+      metalness: 0.0,
+      sheen: opts.sheen ?? 1.0,
+      sheenRoughness: opts.sheenRoughness ?? 0.52,
+      sheenColor: sheen,
+      bumpMap: createPlushBumpTexture(),
+      bumpScale: opts.bumpScale ?? 0.032,
+      ...opts.extra,
+    });
+  } else {
+    mat = new THREE.MeshStandardMaterial({
+      color: base,
+      roughness: opts.roughness ?? 0.86,
+      metalness: 0.0,
+      bumpMap: getDeviceProfile().isMobileOrTablet ? null : createPlushBumpTexture(),
+      bumpScale: opts.bumpScale ?? 0.028,
+      ...opts.extra,
+    });
+  }
+  if (cacheKey) materialCache.set(cacheKey, mat);
+  return mat;
 }
 
 export function createFeltMaterial(colorHex, opts = {}) {
+  const usePhysical = Boolean(opts.physical && getDeviceProfile().usePhysicalPlush);
+  const cacheKey = `felt|${colorHex}|${opts.doubleSided ? 1 : 0}|${opts.sheenColor ?? ''}|${usePhysical ? 1 : 0}`;
+  if (materialCache.has(cacheKey)) return materialCache.get(cacheKey);
+
   const base = new THREE.Color(colorHex);
-  const sheen = opts.sheenColor
-    ? new THREE.Color(opts.sheenColor)
-    : base.clone().lerp(new THREE.Color('#ffffff'), 0.38);
-  return new THREE.MeshPhysicalMaterial({
-    color: base,
-    roughness: 0.92,
-    metalness: 0.0,
-    sheen: 0.78,
-    sheenRoughness: 0.64,
-    sheenColor: sheen,
-    bumpMap: createPlushBumpTexture(),
-    bumpScale: 0.018,
-    side: opts.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
-  });
+  const side = opts.doubleSided ? THREE.DoubleSide : THREE.FrontSide;
+  let mat;
+  if (usePhysical) {
+    const sheen = opts.sheenColor
+      ? new THREE.Color(opts.sheenColor)
+      : base.clone().lerp(new THREE.Color('#ffffff'), 0.38);
+    mat = new THREE.MeshPhysicalMaterial({
+      color: base,
+      roughness: 0.92,
+      metalness: 0.0,
+      sheen: 0.78,
+      sheenRoughness: 0.64,
+      sheenColor: sheen,
+      bumpMap: createPlushBumpTexture(),
+      bumpScale: 0.018,
+      side,
+    });
+  } else {
+    mat = new THREE.MeshStandardMaterial({
+      color: base,
+      roughness: 0.9,
+      metalness: 0.0,
+      side,
+    });
+  }
+  materialCache.set(cacheKey, mat);
+  return mat;
 }
 
-export function createCorduroyMaterial(colorHex = '#c89b7b') {
+export function createCorduroyMaterial(colorHex = '#c89b7b', opts = {}) {
+  const usePhysical = Boolean(opts.physical && getDeviceProfile().usePhysicalPlush);
+  const cacheKey = `cord|${colorHex}|${usePhysical ? 1 : 0}`;
+  if (materialCache.has(cacheKey)) return materialCache.get(cacheKey);
+
   const base = new THREE.Color(colorHex);
-  return new THREE.MeshPhysicalMaterial({
-    color: base,
-    roughness: 0.85,
-    metalness: 0.0,
-    sheen: 0.65,
-    sheenRoughness: 0.6,
-    sheenColor: base.clone().lerp(new THREE.Color('#fff2e6'), 0.4),
-    bumpMap: createCorduroyBumpTexture(),
-    bumpScale: 0.05,
-  });
+  let mat;
+  if (usePhysical) {
+    mat = new THREE.MeshPhysicalMaterial({
+      color: base,
+      roughness: 0.85,
+      metalness: 0.0,
+      sheen: 0.65,
+      sheenRoughness: 0.6,
+      sheenColor: base.clone().lerp(new THREE.Color('#fff2e6'), 0.4),
+      bumpMap: createCorduroyBumpTexture(),
+      bumpScale: 0.05,
+    });
+  } else {
+    mat = new THREE.MeshStandardMaterial({
+      color: base,
+      roughness: 0.85,
+      metalness: 0.0,
+      bumpMap: createCorduroyBumpTexture(),
+      bumpScale: 0.045,
+    });
+  }
+  materialCache.set(cacheKey, mat);
+  return mat;
 }
 
 // Calibrated directly to reference/VIVACIOUS_VEGETABLE_AUBERGINE__68436.webp, VV2A__84205.jpg, VV4ABC__60128.jpg
 export const SharedMaterials = {
-  beadEye: new THREE.MeshPhysicalMaterial({
+  beadEye: new THREE.MeshStandardMaterial({
     color: '#110d12',
-    roughness: 0.14,
-    metalness: 0.04,
-    clearcoat: 0.9,
-    clearcoatRoughness: 0.12,
+    roughness: 0.12,
+    metalness: 0.12,
   }),
   stitchDark: new THREE.MeshStandardMaterial({
     color: '#1f1622',
@@ -201,22 +280,24 @@ export const SharedMaterials = {
     roughness: 0.22,
     metalness: 0.85,
   }),
-  glassDome: new THREE.MeshPhysicalMaterial({
-    color: '#e8f6ff',
-    roughness: 0.08,
-    metalness: 0.0,
-    transmission: 0.65,
+  // Avoid `transmission > 0` which forces a full-scene secondary render pass every frame!
+  glassDome: new THREE.MeshStandardMaterial({
+    color: '#dff4ff',
+    roughness: 0.06,
+    metalness: 0.15,
     transparent: true,
-    opacity: 0.36,
-    ior: 1.4,
+    opacity: 0.30,
+    depthWrite: false,
   }),
   // Official Jellycat Aubergine Colors (Dusty Mauve-Plum & Olive Calyx & Warm Tan Corduroy)
   aubergineMauve: createPlushMaterial('#7e5b79', {
+    physical: true,
     sheenColor: '#c2a6be',
     roughness: 0.86,
     bumpScale: 0.036,
   }),
   aubergineSoftMauve: createPlushMaterial('#967391', {
+    physical: true,
     sheenColor: '#d1bad0',
     roughness: 0.86,
     bumpScale: 0.036,

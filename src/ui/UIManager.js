@@ -106,6 +106,12 @@ export class UIManager {
   }
 
   showInteract(key, text, onClick) {
+    if (this._interactVisible && this._lastInteractKey === key && this._lastInteractText === text) {
+      return;
+    }
+    this._interactVisible = true;
+    this._lastInteractKey = key;
+    this._lastInteractText = text;
     this.elInteract.classList.remove('hidden');
     this.elInteractKey.textContent = key;
     this.elInteractText.textContent = text;
@@ -113,6 +119,8 @@ export class UIManager {
   }
 
   hideInteract() {
+    if (!this._interactVisible) return;
+    this._interactVisible = false;
     this.elInteract.classList.add('hidden');
   }
 
