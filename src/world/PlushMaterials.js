@@ -5,14 +5,40 @@ let cachedPlushBump = null;
 let cachedCorduroyBump = null;
 let cachedCornTexture = null;
 const texLoader = new THREE.TextureLoader();
+const baseTexCache = new Map();
+const baseTexClones = new Map();
 const loadedTexCache = new Map();
 const materialCache = new Map();
 const pendingTexturePromises = [];
+let totalTexturesQueued = 0;
+let totalTexturesDone = 0;
 
-export function loadTiledTexture(url, repeatX = 1, repeatY = 1) {
-  const key = `${url}:${repeatX}:${repeatY}`;
-  if (loadedTexCache.has(key)) return loadedTexCache.get(key);
+function downscaleImageIfMobile(img) {
+  const device = getDeviceProfile();
+  if (!device.isMobileOrTablet) return img;
+  const maxDim = 512;
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  if (w <= maxDim && h <= maxDim) return img;
+  const scale = maxDim / Math.max(w, h);
+  const tw = Math.max(64, Math.round(w * scale));
+  const th = Math.max(64, Math.round(h * scale));
+  try {
+    const c = document.createElement('canvas');
+    c.width = tw;
+    c.height = th;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, tw, th);
+    return c;
+  } catch {
+    return img;
+  }
+}
 
+function getOrLoadBaseTexture(url) {
+  if (baseTexCache.has(url)) return baseTexCache.get(url);
+
+  totalTexturesQueued++;
   let resolveLoad;
   const loadPromise = new Promise((res) => {
     resolveLoad = res;
@@ -21,29 +47,74 @@ export function loadTiledTexture(url, repeatX = 1, repeatY = 1) {
 
   const tex = texLoader.load(
     url,
-    () => resolveLoad(true),
+    (loaded) => {
+      if (loaded.image) {
+        const resized = downscaleImageIfMobile(loaded.image);
+        if (resized !== loaded.image) {
+          loaded.image = resized;
+        }
+      }
+      loaded.needsUpdate = true;
+      const clones = baseTexClones.get(url);
+      if (clones) {
+        for (const c of clones) c.needsUpdate = true;
+      }
+      totalTexturesDone++;
+      resolveLoad(true);
+    },
     undefined,
-    () => resolveLoad(false)
+    () => {
+      totalTexturesDone++;
+      resolveLoad(false);
+    }
   );
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = getDeviceProfile().anisotropy;
+  baseTexCache.set(url, tex);
+  return tex;
+}
+
+export function loadSingleTexture(url) {
+  return getOrLoadBaseTexture(url);
+}
+
+export function loadTiledTexture(url, repeatX = 1, repeatY = 1) {
+  const key = `${url}:${repeatX}:${repeatY}`;
+  if (loadedTexCache.has(key)) return loadedTexCache.get(key);
+
+  const base = getOrLoadBaseTexture(url);
+  // Clone shares the exact same GPU Texture.source — zero duplicate download or VRAM!
+  const tex = base.clone();
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(repeatX, repeatY);
   tex.anisotropy = getDeviceProfile().anisotropy;
+  tex.needsUpdate = true;
+  if (!baseTexClones.has(url)) baseTexClones.set(url, []);
+  baseTexClones.get(url).push(tex);
   loadedTexCache.set(key, tex);
   return tex;
 }
 
 /**
- * Waits for all queued textures to finish downloading & decoding (bounded by timeoutMs)
- * so WebGPU warmup uploads every texture + mipmap once up front instead of stalling mid-drag.
+ * Waits for all queued textures to finish downloading, decoding, and optional iPad
+ * 512px downscaling so GPU warmup uploads every texture + mipmap once up front.
  */
-export function waitForAllTextures(timeoutMs = 3500) {
+export function waitForAllTextures(timeoutMs = 12000, onProgress = null) {
   if (pendingTexturePromises.length === 0) return Promise.resolve();
+  let timer = null;
+  if (onProgress) {
+    onProgress(totalTexturesDone, totalTexturesQueued);
+    timer = setInterval(() => onProgress(totalTexturesDone, totalTexturesQueued), 150);
+  }
   return Promise.race([
     Promise.allSettled(pendingTexturePromises),
     new Promise((res) => setTimeout(res, timeoutMs)),
-  ]);
+  ]).finally(() => {
+    if (timer) clearInterval(timer);
+    if (onProgress) onProgress(totalTexturesDone, totalTexturesQueued);
+  });
 }
 
 export function createPlushBumpTexture() {

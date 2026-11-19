@@ -245,9 +245,10 @@ export class TouchController {
         for (const t of e.changedTouches) {
           if (t.identifier === this.camTouchId) {
             e.preventDefault();
-            const dx = t.clientX - this.camLast.x;
-            const dy = t.clientY - this.camLast.y;
-            this.camLast = { x: t.clientX, y: t.clientY };
+            const dx = THREE.MathUtils.clamp(t.clientX - this.camLast.x, -90, 90);
+            const dy = THREE.MathUtils.clamp(t.clientY - this.camLast.y, -90, 90);
+            this.camLast.x = t.clientX;
+            this.camLast.y = t.clientY;
             if (this.rideManager?.activeRide) {
               this.rideManager.rideYawOffset -= dx * 0.0065;
               this.rideManager.ridePitchOffset = THREE.MathUtils.clamp(

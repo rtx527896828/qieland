@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
   createFeltMaterial,
   createPlushMaterial,
+  loadSingleTexture,
   loadTiledTexture,
   SharedMaterials,
 } from './PlushMaterials.js';
@@ -254,7 +255,7 @@ export class ParkEnvironment {
       dynamicObjects,
       protectedMaterials,
       chunkSize: 120,
-      minShadowRadius: 1.35,
+      minShadowRadius: getDeviceProfile().isMobileOrTablet ? 2.6 : 1.35,
       label: 'park',
     });
 
@@ -961,9 +962,7 @@ export class ParkEnvironment {
       screenStage.add(p);
     }
 
-    const texLoader = new THREE.TextureLoader();
-    const fallbackTex = texLoader.load('./assets/images/castle_jumbo_frame.png');
-    fallbackTex.colorSpace = THREE.SRGBColorSpace;
+    const fallbackTex = loadSingleTexture('./assets/images/castle_jumbo_frame.png');
     this.jumboMat = new THREE.MeshBasicMaterial({ map: fallbackTex });
     const screenPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.16), this.jumboMat);
     screenPlane.position.set(0, 3.6, 0.23);
@@ -981,29 +980,39 @@ export class ParkEnvironment {
     maquettePed.add(pedBase, pedRing);
     this.group.add(maquettePed);
     this.layout.addCollider('circle', 8.0, -22.5, 2.4);
-    loadComfyGLB('./assets/models/castle_royal.glb', 3.4).then((glb) => {
-      if (glb) {
-        glb.position.y = 0.88;
-        maquettePed.add(glb);
-        this.exhibitModels.push({ mesh: glb });
-      }
-    });
 
-    const video = document.createElement('video');
-    video.src = './assets/video/jumbo_parade.mp4';
-    video.loop = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.crossOrigin = 'anonymous';
-    video.addEventListener('canplay', () => {
-      const vTex = new THREE.VideoTexture(video);
-      vTex.colorSpace = THREE.SRGBColorSpace;
-      this.jumboMat.map = vTex;
-      this.jumboMat.needsUpdate = true;
-      video.play().catch(() => { });
-    });
-    video.load();
-    this.videoEl = video;
+    const isMobileOrTablet = getDeviceProfile().isMobileOrTablet;
+    if (!isMobileOrTablet) {
+      loadComfyGLB('./assets/models/castle_royal.glb', 3.4).then((glb) => {
+        if (glb) {
+          glb.position.y = 0.88;
+          maquettePed.add(glb);
+          this.exhibitModels.push({ mesh: glb });
+        }
+      });
+
+      const video = document.createElement('video');
+      video.src = './assets/video/jumbo_parade.mp4';
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.crossOrigin = 'anonymous';
+      video.addEventListener('canplay', () => {
+        const vTex = new THREE.VideoTexture(video);
+        vTex.colorSpace = THREE.SRGBColorSpace;
+        this.jumboMat.map = vTex;
+        this.jumboMat.needsUpdate = true;
+        video.play().catch(() => { });
+      });
+      video.load();
+      this.videoEl = video;
+    } else {
+      // Lightweight procedural Royal Aubergine King statue on iPad (avoids 16MB GLB + VideoTexture Metal stalls)
+      const miniKing = createJellycatCharacter('aubergine_king', { scale: 1.45 });
+      miniKing.position.y = 0.88;
+      maquettePed.add(miniKing);
+      this.exhibitModels.push({ mesh: miniKing });
+    }
 
     const castleLight = new THREE.PointLight('#ffd699', 0, 56);
     castleLight.position.set(0, 16, 12);
@@ -1036,14 +1045,16 @@ export class ParkEnvironment {
       const entry = { mesh: statue };
       this.exhibitModels.push(entry);
 
-      loadComfyGLB(ex.url, 1.65).then((glb) => {
-        if (glb) {
-          ped.remove(statue);
-          glb.position.y = 0.85;
-          ped.add(glb);
-          entry.mesh = glb;
-        }
-      });
+      if (!isMobileOrTablet) {
+        loadComfyGLB(ex.url, 1.65).then((glb) => {
+          if (glb) {
+            ped.remove(statue);
+            glb.position.y = 0.85;
+            ped.add(glb);
+            entry.mesh = glb;
+          }
+        });
+      }
     }
   }
 

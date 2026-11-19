@@ -11,7 +11,7 @@ import {
   getTrainTrackRadius,
   ZONE_CENTERS,
 } from './ParkLayout.js';
-import { optimizeRigidGroup, optimizeStaticScene } from './SceneOptimizer.js';
+import { getDeviceProfile, optimizeRigidGroup, optimizeStaticScene } from './SceneOptimizer.js';
 
 export class AttractionsManager {
   constructor(scene, layout) {
@@ -117,10 +117,11 @@ export class AttractionsManager {
       this.ringTossGame?.aimRing,
     ];
 
+    const isMobile = getDeviceProfile().isMobileOrTablet;
     this.optimizationStats = optimizeStaticScene(this.group, {
       dynamicObjects,
       chunkSize: 120,
-      minShadowRadius: 1.5,
+      minShadowRadius: isMobile ? 2.8 : 1.5,
       label: 'attractions',
     });
 
@@ -150,7 +151,7 @@ export class AttractionsManager {
       ...(this.ringTossGame?.pegs?.map((p) => p.mesh) || []),
     ];
     for (const rg of rigidTargets) {
-      if (rg) optimizeRigidGroup(rg, { minShadowRadius: 1.4, label: 'ride_part' });
+      if (rg) optimizeRigidGroup(rg, { minShadowRadius: isMobile ? 3.2 : 1.4, label: 'ride_part' });
     }
     if (this.ferris?.rotor) {
       optimizeRigidGroup(this.ferris.rotor, {
@@ -326,13 +327,15 @@ export class AttractionsManager {
     loco.add(fallbackLoco);
     this.group.add(loco);
 
-      loadComfyGLB('./assets/models/train_locomotive.glb', 3.4).then((glb) => {
-        if (glb) {
-          loco.remove(fallbackLoco);
-          glb.position.y = 0.05;
-          loco.add(glb);
-        }
-      });
+      if (!getDeviceProfile().isMobileOrTablet) {
+        loadComfyGLB('./assets/models/train_locomotive.glb', 3.4).then((glb) => {
+          if (glb) {
+            loco.remove(fallbackLoco);
+            glb.position.y = 0.05;
+            loco.add(glb);
+          }
+        });
+      }
 
       const carriages = [];
       const riderIds = ['aubergine_king', 'bashful_bunny'];

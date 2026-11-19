@@ -95,12 +95,21 @@ async function bootstrap() {
 
   weather.setMode('sunny');
 
-  // Full-360° GPU Pre-Warmup: waits for textures, compiles ALL off-screen & on-screen
-  // WGSL/GLSL pipelines asynchronously, and uploads all buffers/textures/mipmaps once up front
-  // so swinging the camera 360° never triggers mid-frame shader compilation hitches!
+  // Full-360° GPU Pre-Warmup:
+  // 1. Wait for all textures (with iPad 512px downscaling + live progress over WiFi)
+  // 2. Compile ALL WGSL/GLSL pipelines off-thread via compileAsync
+  // 3. Render 4 compass directions from elevated center with wide FOV so Apple Silicon Metal
+  //    actually rasterizes EVERY material & uploads EVERY texture/mipmap into GPU residency!
   async function prewarmAll360Pipelines() {
     const t0 = performance.now();
-    await waitForAllTextures(3500);
+    await waitForAllTextures(12000, (done, total) => {
+      if (enterBtn && total > 0) {
+        enterBtn.textContent =
+          done < total
+            ? `⚡ 正在加载园区贴图 (${done}/${total})…`
+            : `⚡ 正在预热 ${backendLabel} 360° 管线…`;
+      }
+    });
 
     const savedCull = [];
     scene.traverse((obj) => {
@@ -114,15 +123,38 @@ async function bootstrap() {
     if (park.paradeFloat) park.paradeFloat.visible = true;
     if (weather.starField) weather.starField.visible = true;
 
+    const prevFov = camera.fov;
+    const prevPos = camera.position.clone();
+    scene.updateMatrixWorld(true);
+
     try {
       if (typeof renderer.compileAsync === 'function') {
         await renderer.compileAsync(scene, camera);
       }
-      // Single 360° warmup render uploads all vertex/index/uniform buffers, mipmaps, and shadow pipelines
-      renderer.render(scene, camera);
+
+      // 4-direction elevated sweep ensures Apple Silicon Metal compiles fragment PSOs
+      // and makes every texture resident across all 360° before gameplay starts
+      camera.fov = 95;
+      camera.updateProjectionMatrix();
+      const sweepTargets = [
+        [0, 6, -80],
+        [80, 6, 0],
+        [0, 6, 80],
+        [-80, 6, 0],
+      ];
+      for (const [tx, ty, tz] of sweepTargets) {
+        camera.position.set(0, 26, 0);
+        camera.lookAt(tx, ty, tz);
+        camera.updateMatrixWorld(true);
+        renderer.render(scene, camera);
+      }
     } catch (e) {
       console.warn('[Qieland] Pre-warmup warning:', e);
     } finally {
+      camera.fov = prevFov;
+      camera.updateProjectionMatrix();
+      camera.position.copy(prevPos);
+      camera.lookAt(-4, 7, -28);
       for (const [obj, prev] of savedCull) obj.frustumCulled = prev;
       if (park.paradeFloat) park.paradeFloat.visible = prevParadeVis;
       if (weather.starField) weather.starField.visible = prevStarVis;
