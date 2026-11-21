@@ -37,6 +37,11 @@ export class UIManager {
 
     this.elBackdrop = document.getElementById('modal-backdrop');
     this.modals = ['modal-map', 'modal-wardrobe', 'modal-dex', 'modal-comfy', 'modal-photo'];
+    this.gpuOverlay = null;
+    this._lastRideStatus = '';
+    this._lastRideStatusTime = 0;
+    this._lastMgTimer = '';
+    this._lastMgScore = '';
 
     this._bindModalClose();
     this._renderDex();
@@ -77,13 +82,22 @@ export class UIManager {
     return !this.elBackdrop.classList.contains('hidden');
   }
 
+  setGpuOverlay(overlay) {
+    this.gpuOverlay = overlay;
+  }
+
   showHud() {
     this.elHud.classList.remove('hidden');
+    this.gpuOverlay?.setHudVisible(true);
   }
 
   addCoins(n) {
     this.coins += n;
-    this.elCoins.textContent = String(this.coins);
+    const nextText = String(this.coins);
+    if (this._lastCoinText !== nextText) {
+      this._lastCoinText = nextText;
+      this.elCoins.textContent = nextText;
+    }
   }
 
   unlockDex(id) {
@@ -109,19 +123,27 @@ export class UIManager {
     if (this._interactVisible && this._lastInteractKey === key && this._lastInteractText === text) {
       return;
     }
+    const wasVisible = this._interactVisible;
     this._interactVisible = true;
     this._lastInteractKey = key;
     this._lastInteractText = text;
-    this.elInteract.classList.remove('hidden');
-    this.elInteractKey.textContent = key;
-    this.elInteractText.textContent = text;
     this.elInteract.onclick = onClick;
+    if (!wasVisible) {
+      this.elInteract.classList.remove('hidden');
+    }
+    if (this.gpuOverlay) {
+      this.gpuOverlay.setInteractBanner(true, key, text);
+    } else {
+      this.elInteractKey.textContent = key;
+      this.elInteractText.textContent = text;
+    }
   }
 
   hideInteract() {
     if (!this._interactVisible) return;
     this._interactVisible = false;
     this.elInteract.classList.add('hidden');
+    this.gpuOverlay?.setInteractBanner(false);
   }
 
   showDialogue(emoji, name, text) {
@@ -153,24 +175,38 @@ export class UIManager {
   }
 
   setRideStatus(text) {
+    if (this._lastRideStatus === text) return;
+    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    if (now - this._lastRideStatusTime < 260 && this._lastRideStatus) return;
+    this._lastRideStatus = text;
+    this._lastRideStatusTime = now;
     this.elRideStatus.textContent = text;
   }
 
   hideRideHud() {
+    this._lastRideStatus = '';
     this.elRideHud.classList.add('hidden');
   }
 
   showMiniGameHud(title, hint, timerText, scoreText) {
     this.elMgTitle.textContent = title;
     this.elMgHint.textContent = hint;
+    this._lastMgTimer = timerText;
+    this._lastMgScore = scoreText;
     this.elMgTimer.textContent = timerText;
     this.elMgScore.textContent = scoreText;
     this.elMgHud.classList.remove('hidden');
   }
 
   updateMiniGameStats(timerText, scoreText) {
-    this.elMgTimer.textContent = timerText;
-    this.elMgScore.textContent = scoreText;
+    if (this._lastMgTimer !== timerText) {
+      this._lastMgTimer = timerText;
+      this.elMgTimer.textContent = timerText;
+    }
+    if (this._lastMgScore !== scoreText) {
+      this._lastMgScore = scoreText;
+      this.elMgScore.textContent = scoreText;
+    }
   }
 
   setMiniGameControls(node) {

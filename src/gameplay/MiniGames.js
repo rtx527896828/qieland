@@ -761,8 +761,11 @@ export class MiniGamesManager {
       const hg = this.attractions.hoopsGame;
       hg.hoopAssembly.position.x = Math.sin(elapsed * 1.9) * 1.65;
       this.hoopPower = 0.5 + Math.sin(elapsed * 3.4) * 0.48;
+      if (hg.powerNeedle3D) {
+        hg.powerNeedle3D.position.x = (this.hoopPower - 0.5) * 2.4;
+      }
       if (this.hoopGaugeBar) {
-        this.hoopGaugeBar.style.left = `${Math.round(this.hoopPower * 100)}%`;
+        this.hoopGaugeBar.style.transform = `translate3d(${(this.hoopPower * 220 - 4).toFixed(1)}px, 0, 0)`;
       }
 
       if (this.hoopBallFlight) {

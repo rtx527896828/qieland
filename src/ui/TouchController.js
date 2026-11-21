@@ -7,11 +7,12 @@ import * as THREE from 'three';
  * - Right tactile action pad: Jump/Boost (Space), Interact (E), Camera View (V), Cheer (H)
  */
 export class TouchController {
-  constructor(canvas, player, rideManager, onInteract) {
+  constructor(canvas, player, rideManager, onInteract, gpuOverlay = null) {
     this.canvas = canvas;
     this.player = player;
     this.rideManager = rideManager;
     this.onInteract = onInteract;
+    this.gpuOverlay = gpuOverlay;
 
     this.rootEl = document.getElementById('touch-controls');
     this.joyZone = document.getElementById('touch-joystick');
@@ -47,6 +48,7 @@ export class TouchController {
     if (this.btnToggle) {
       this.btnToggle.classList.toggle('active-toggle', this.visible);
     }
+    this.gpuOverlay?.setTouchControlsVisible(this.visible);
   }
 
   _bindToggle() {
@@ -63,7 +65,11 @@ export class TouchController {
       this.joyTouchId = null;
       this.player.touchStick.x = 0;
       this.player.touchStick.y = 0;
-      this.joyKnob.style.transform = 'translate(-50%, -50%)';
+      if (this.gpuOverlay) {
+        this.gpuOverlay.setJoystickState(0, 0);
+      } else {
+        this.joyKnob.style.transform = 'translate(-50%, -50%)';
+      }
     };
 
     const updateStick = (clientX, clientY) => {
@@ -75,9 +81,13 @@ export class TouchController {
       const ny = dist > 0.001 ? dy / dist : 0;
       const ox = nx * clamped;
       const oy = ny * clamped;
-      this.joyKnob.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
       this.player.touchStick.x = ox / this.joyMaxR;
       this.player.touchStick.y = oy / this.joyMaxR;
+      if (this.gpuOverlay) {
+        this.gpuOverlay.setJoystickState(this.player.touchStick.x, this.player.touchStick.y);
+      } else {
+        this.joyKnob.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+      }
     };
 
     // Touch events (multi-touch native on iPad Safari/Chrome)
@@ -286,7 +296,11 @@ export class TouchController {
     if (this._lastInteractActive === active && this._lastInteractText === text) return;
     this._lastInteractActive = active;
     this._lastInteractText = text;
-    this.btnInteract.classList.toggle('ready', active);
-    this.btnInteract.textContent = text;
+    if (this.gpuOverlay) {
+      this.gpuOverlay.setTouchInteractState(active, label);
+    } else {
+      this.btnInteract.classList.toggle('ready', active);
+      this.btnInteract.textContent = text;
+    }
   }
 }

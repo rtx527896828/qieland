@@ -12,6 +12,7 @@ import { RideManager } from './gameplay/RideManager.js';
 import { MiniGamesManager } from './gameplay/MiniGames.js';
 import { UIManager } from './ui/UIManager.js';
 import { TouchController } from './ui/TouchController.js';
+import { WebGPUOverlay } from './ui/WebGPUOverlay.js';
 import { getDeviceProfile } from './world/SceneOptimizer.js';
 import { waitForAllTextures } from './world/PlushMaterials.js';
 import { setGlbCompiler } from './world/CharacterFactory.js';
@@ -59,6 +60,7 @@ async function bootstrap() {
   const camera = new THREE.PerspectiveCamera(56, window.innerWidth / window.innerHeight, 0.2, 420);
   camera.position.set(0, 17, 28);
   camera.lookAt(-4, 7, -28);
+  scene.add(camera);
 
   // Pre-compile any async-loaded ComfyUI GLBs off-thread before attaching to live scene
   setGlbCompiler(async (glbWrapper) => {
@@ -81,7 +83,9 @@ async function bootstrap() {
     enterBtn.textContent = `⚡ 正在预编译 ${backendLabel} 渲染管线…`;
   }
 
+  const gpuOverlay = new WebGPUOverlay(camera);
   const ui = new UIManager();
+  ui.setGpuOverlay(gpuOverlay);
   const audio = new AudioManager();
   const layout = new ParkLayoutRegistry();
   const park = new ParkEnvironment(scene, audio, layout);
@@ -91,7 +95,13 @@ async function bootstrap() {
   const npcs = new NPCManager(scene, ui, audio, layout);
   const rideManager = new RideManager(attractions, player, camera, audio, ui);
   const miniGames = new MiniGamesManager(attractions, player, camera, audio, ui);
-  const touchController = new TouchController(canvas, player, rideManager, () => handleInteract());
+  const touchController = new TouchController(
+    canvas,
+    player,
+    rideManager,
+    () => handleInteract(),
+    gpuOverlay
+  );
 
   weather.setMode('sunny');
 
@@ -347,11 +357,13 @@ async function bootstrap() {
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(device.maxPixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
+    gpuOverlay.updateLayout();
   });
 
   const clock = new THREE.Clock();
   let fpsFrames = 0;
   let fpsLastTime = performance.now();
+  let lastBadgeFps = -1;
 
   window.__qielandStats = {
     backend: isWebGPU ? 'WebGPU' : 'WebGL2',
@@ -415,17 +427,23 @@ async function bootstrap() {
       camera.lookAt(-4, 7, -28);
     }
 
-    renderer.render(scene, camera);
-
+    gpuOverlay.update(elapsed);
     if (pendingPostcard) {
+      const prevHudVis = gpuOverlay.root.visible;
+      gpuOverlay.root.visible = false;
+      renderer.render(scene, camera);
       pendingPostcard = false;
       finalizePostcardFromCanvas();
+      gpuOverlay.root.visible = prevHudVis;
+    } else {
+      renderer.render(scene, camera);
     }
 
-    // Update live FPS & draw-call telemetry every 500ms
+    // Update live FPS & draw-call telemetry at most once per second (and only if changed >= 2 FPS)
+    // to prevent frequent DOM text mutations over the WebGPU canvas
     fpsFrames++;
     const now = performance.now();
-    if (now - fpsLastTime >= 500) {
+    if (now - fpsLastTime >= 1000) {
       const fps = Math.round((fpsFrames * 1000) / (now - fpsLastTime));
       fpsFrames = 0;
       fpsLastTime = now;
@@ -434,7 +452,8 @@ async function bootstrap() {
       window.__qielandStats.fps = fps;
       window.__qielandStats.drawCalls = calls;
       window.__qielandStats.triangles = tris;
-      if (rendererBadge) {
+      if (rendererBadge && Math.abs(fps - lastBadgeFps) >= 2) {
+        lastBadgeFps = fps;
         rendererBadge.textContent = `${backendLabel} · ${fps} FPS`;
       }
     }

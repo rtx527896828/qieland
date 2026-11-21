@@ -113,6 +113,7 @@ export class AttractionsManager {
       ...(this.dartsGame?.targets?.map((t) => t.mesh) || []),
       this.hoopsGame?.hoopAssembly,
       this.hoopsGame?.ball,
+      this.hoopsGame?.powerNeedle3D,
       ...(this.ringTossGame?.pegs?.map((p) => p.mesh) || []),
       this.ringTossGame?.aimRing,
     ];
@@ -1245,8 +1246,25 @@ export class AttractionsManager {
     );
     ball.position.set(0, 1.4, 3.0);
 
-    court.add(frame, roof, floor, hoopAssembly, ball);
-    this.hoopsGame = { group: court, center: c, rotY: -Math.PI * 0.65, hoopAssembly, ball };
+    // Hardware 3D Neon Power Gauge Bar & Moving Needle (replaces 60fps DOM layout thrashing!)
+    const gaugeBar = new THREE.Mesh(
+      new THREE.BoxGeometry(2.6, 0.22, 0.08),
+      new THREE.MeshBasicMaterial({ color: '#2b1442' })
+    );
+    gaugeBar.position.set(0, 2.25, 1.35);
+    const gaugeSweet = new THREE.Mesh(
+      new THREE.BoxGeometry(0.86, 0.24, 0.1),
+      new THREE.MeshBasicMaterial({ color: '#22c55e' })
+    );
+    gaugeSweet.position.set(0, 2.25, 1.36);
+    const powerNeedle3D = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.34, 0.14),
+      new THREE.MeshBasicMaterial({ color: '#fde047' })
+    );
+    powerNeedle3D.position.set(0, 2.25, 1.38);
+
+    court.add(frame, roof, floor, hoopAssembly, ball, gaugeBar, gaugeSweet, powerNeedle3D);
+    this.hoopsGame = { group: court, center: c, rotY: -Math.PI * 0.65, hoopAssembly, ball, powerNeedle3D };
 
     this._registerAttraction({
       id: 'hoops',
